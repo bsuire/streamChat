@@ -23,6 +23,15 @@
     <script>
         // connect socket to host 
         var socket = io();
+
+        // promt user for name 
+        var person = prompt("Please enter your name");
+        while (!(/\S/.test(person))) {
+            person = prompt("Your name cannot be left blank! Please enter your name again");
+        }
+        socket.emit('user name',person);
+
+
         // send message 
         $('form').submit(function(){
             socket.emit('chat message', $('#m').val());
