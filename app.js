@@ -7,7 +7,7 @@ var online_users = [];
 
 function User(username,socket){
     this.username = username;
-    this.socket_id = socket.id;
+    this.socketid = socket.id;
 }
 
 app.use(express.static(__dirname + '/public', {index: false}));
@@ -27,7 +27,8 @@ io.on('connection', function(socket){
     // prompt for user name and add to online users list. Also sends back list of last 10 connected users (minus you)
     socket.on('user name', function(username){
         user = new User(username,socket);
-        console.log(username + ' just came online!');
+        var address = socket.handshake.address;
+        console.log(username + ' just came online! ('+address+')');
         online_users.push(user);
         console.log(online_users);
         var matching_users = [];
@@ -35,27 +36,21 @@ io.on('connection', function(socket){
         for (var i= online_users.length - 2; i >= 0 && i > online_users.length -12; i--){
             matching_users.push(online_users[i].username); 
         }
-        io.emit('update users', matching_users);
+        socket.emit('update users', matching_users);
     });
     
-    // TODO initialize list with random users, and also send back random users if query=""? (empty query) i
-    // FIXME do not show user inside userlist
     // user searching for other online users: update list 
     socket.on('search', function(query){
         console.log(user.username + ' is looking for a friend starting with '+ query ); // log message into server
         var matching_users = findOnlineUsers(query);
         console.log(matching_users);
-        if(matching_users.length === 0){
-            for (var i= online_users.length - 1; i >= 0 && i > online_users.length - 11; i--){
-                matching_users.push(online_users[i].username); 
-            }
-        }
-        io.emit('update users', matching_users);
+        socket.emit('update users', matching_users);
     });
     
     // message received
     socket.on('chat message', function(msg){
         console.log('message: ' + msg); // log message into server
+        //socket.broadcast.to(userid).emit('my message', msg);
         io.emit('chat message', msg);
     });
 
@@ -66,7 +61,7 @@ io.on('connection', function(socket){
             console.log(username + ' disconnected');
         } 
         catch(err){ 
-            console.log("Error on disconnect event: 1st line");
+            console.log("Error on disconnect event.");
         } 
         
         var i = online_users.indexOf(user);
@@ -95,10 +90,23 @@ function findOnlineUsers(query){
 } 
 
 
-function getUserName(socket_id){
+function getUserName(socketid){
     for (var i=0; i < online_users.length; i++) {
-        if (online_users[i].socket_id === socket_id) {
+        if (online_users[i].socketid === socketid) {
         return online_users[i];
         }
     }
 }
+
+// http://stackoverflow.com/questions/13063350/node-js-incoming-request-sourceip
+var getClientIp = function(req) {
+    var ipAddress = null;
+    var forwardedIpsStr = req.headers['x-forwarded-for'];
+    if (forwardedIpsStr) {
+    ipAddress = forwardedIpsStr[0];
+    }
+    if (!ipAddress) {
+    ipAddress = req.connection.remoteAddress;
+    }
+    return ipAddress;
+};
