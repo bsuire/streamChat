@@ -6,13 +6,13 @@ streamChat uses socket.io for real-time communications between users, and used t
 
 **CURRENTLY IN DEVELOPMENT**
 
-## Features  
+### Features  
  - group chat (up to 5 peope)
  - look up online users
  - ban users
  - image/video sharing
 
-## Technology
+### Technology
 
 ##### Backend:
   - Node.js + Express
@@ -23,7 +23,7 @@ streamChat uses socket.io for real-time communications between users, and used t
   - jQuery
 
 
-## Running the application
+### Running the application
 
 ##### 1. Download app
 
