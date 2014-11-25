@@ -41,15 +41,16 @@ brew install nvm
 
 ##### 3. Install app
 
-From the project directory, run
+From the project directory, run:
 ```
 nvm use 0.10
 ```
-Then,
+Then:
 
 ```
 npm install
 ```
+... which will install all of the modules required to run this application.
 
 ##### 4. Run app
 
@@ -57,12 +58,11 @@ Finally, you can run the application locally with:
 ```
 node app.js
 ```
-Which should display
+Which should display:
 ```
 listening on *:3000
 ```
-To start using the chat app, open your browser at 
-http://localhost:3000/
+To start using the chat app, open your browser at http://localhost:3000/
 
 Happy chatting!
 
