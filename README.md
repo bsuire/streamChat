@@ -43,7 +43,7 @@ brew install nvm
 
 From the project directory, run
 ```
-nvm use
+nvm use 0.10
 ```
 Then,
 
