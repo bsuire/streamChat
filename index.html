@@ -1,23 +1,41 @@
 <!doctype html>
 <html>
 <head>
-    <title>Socket.IO chat</title>
+    <title>streamChat!</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font: 13px Helvetica, Arial; }
-        form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-        form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-        form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+        
+        #room { width: 85%; } 
+        #lobby { width: 15%; position: absolute; top: 0px; right: 0px; border-left-style:solid; border-left-width:6px; border-left-color: #66CCFF; } 
+        #lobby p { background: #66CCFF; text-align:center; padding:10px; }
+        #lobby form input { width: 100%; }
+        #users { list-style-type: none; margin: 0; padding: 0; }
+        #users li { padding: 5px 10px; }
+        #users li:nth-child(odd) { background: #eee; }
+
+        #room form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+        #room form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+        #room form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
         #messages { list-style-type: none; margin: 0; padding: 0; }
         #messages li { padding: 5px 10px; }
         #messages li:nth-child(odd) { background: #eee; }
     </style>
 </head>
 <body>
-    <ul id="messages"></ul>
-    <form action="">
-        <input id="m" autocomplete="off" /><button>Send</button>
-    </form>
+    <div id="room"> 
+        <ul id="messages"></ul>
+        <form action="">
+            <input id="m" autocomplete="off" /><button>Send</button>
+        </form>
+    </div>
+    <div id = "lobby">
+        <p> Online users </p>
+        <form action="">
+            <input id="search" type="text" placeholder="type in friend's username" />
+        </form>
+        <ul id="users"></ul>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jquery-2.1.1.min.js"></script>
     <script>
@@ -31,7 +49,21 @@
         }
         socket.emit('user name',person);
 
-
+        // search for other users online (submitted everytime text input in search box is changed) 
+        $("#search").on("input", function() {
+            socket.emit('search',$('#search').val());
+        });
+        
+        // initialize list with online users  
+        //$( document ).ready() 
+        // update online users
+        socket.on('update users', function(user_list){
+            $('#users').empty();
+            for(var i=0; i < user_list.length; i++){
+                $('#users').append($('<li>').text(user_list[i]));
+            }
+        });
+        
         // send message 
         $('form').submit(function(){
             socket.emit('chat message', $('#m').val());
