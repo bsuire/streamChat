@@ -39,6 +39,7 @@ io.on('connection', function(socket){
         socket.emit('update users', matching_users);
     });
     
+    // FIXME returns all users BUT yourself
     // user searching for other online users: update list 
     socket.on('search', function(query){
         console.log(user.username + ' is looking for a friend starting with '+ query ); // log message into server
