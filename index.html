@@ -89,11 +89,38 @@
             var username = ev.dataTransfer.getData("text");
             var add_request = {}; 
             add_request['type'] = type; 
-            add_request['username'] = username; 
-            alert("Sent chat request to " + username); 
+            add_request['to'] = username; 
+            // alert("Sent chat request to " + username); 
             socket.emit('add to chat',add_request);
             console.log(("Adding " + username +" to "+ type + "  chat")); 
         }
+
+        // TODO rename all add_req and add_request to chat_req
+        // TODO change event sequence names to: send invite, forward invite, and RSVP
+        socket.on('chat request', function(chat_req){
+            
+            var rsvp = {}; 
+            rsvp['to'] = chat_req['from'];
+            rsvp['from'] = chat_req['to'];
+            
+            if (confirm(chat_req['from'] + ' just sent you a chat request?\n Wanna talk to '+ chat_req['from'] +'?')) {
+                rsvp['rsvp'] = true; 
+            } else {
+                rsvp['rsvp'] = false; 
+            }
+            
+            socket.emit('RSVP', rsvp);
+        });
+
+        // Incoming RSVP for chat invite
+        socket.on('RSVP', function(rsvp){
+            
+            if (rsvp['rsvp'] === true){
+                alert('Great news! '+ rsvp['from'] +' accepted the request to chat :)');
+            } else {
+                alert('Sorry! '+ rsvp['from'] + ' turned down the request to chat :(');
+            } 
+        });    
         
         // send message 
         $('form').submit(function(){
