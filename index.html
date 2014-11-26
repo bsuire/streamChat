@@ -33,7 +33,7 @@
     </div>
     <div id = "lobby">
         <div id = "lobbyheader">
-            <p> Who's Online </p>
+            <p> Who's Online? </p>
         </div>
             <form action="">
                 <input id="search" type="text" placeholder="type in friend's username" />
@@ -87,15 +87,12 @@
         function drop(ev,type) {
             ev.preventDefault();
             var username = ev.dataTransfer.getData("text");
-            alert("Adding " + username +" to " + type + " chat"); 
-            if (type === "new") {
-                socket.emit('add to new chat',username);
-                console.log(("Adding " + username +" to new  chat")); 
-            }
-            else {
-                socket.emit('add to current chat',username);
-                console.log(("Adding " + username +" to current chat")); 
-            }
+            var add_request = {}; 
+            add_request['type'] = type; 
+            add_request['username'] = username; 
+            alert("Sent chat request to " + username); 
+            socket.emit('add to chat',add_request);
+            console.log(("Adding " + username +" to "+ type + "  chat")); 
         }
         
         // send message 

@@ -47,6 +47,13 @@ io.on('connection', function(socket){
         console.log(matching_users);
         socket.emit('update users', matching_users);
     });
+
+    // add
+    socket.on('add to chat', function(add_req){
+        console.log(add_req['type']);
+        console.log(add_req['username']);
+    });
+
     
     // message received
     socket.on('chat message', function(msg){
