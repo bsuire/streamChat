@@ -125,12 +125,13 @@
         // send message 
         $('form').submit(function(){
             socket.emit('chat message', $('#m').val());
+            $('#messages').append($('<li>').text('You:\t' + $('#m').val()));
             $('#m').val('');
             return false;
         });
         // receive message
         socket.on('chat message', function(msg){
-            $('#messages').append($('<li>').text(msg));
+            $('#messages').append($('<li>').text(msg['from'] + ':\t' + msg['content']));
         });
     </script>
 </body>

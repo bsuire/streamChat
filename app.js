@@ -98,10 +98,14 @@ io.on('connection', function(socket){
      // TODO log message sent directly into one's chat interface. Also: display name of sender
     // message received
     socket.on('chat message', function(msg){
+        message={};
+        message['from'] = user.username;
+        message['content'] = msg;
+        
         console.log('message: ' + msg); // log message into server
         var to = recipients[user.username];
         for(var i=0; i < to.length; i++){
-            sockets[to[i]].emit('chat message', msg);
+            sockets[to[i]].emit('chat message', message);
         }
     });
 
