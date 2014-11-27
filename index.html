@@ -51,9 +51,14 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jquery-2.1.1.min.js"></script>
     <script>
-        // TODO: be consistent with use of quotation marks (choose single quotes over double)
-        // TODO: this file has too many scripts: use a separate .js file. (ideally, for the styling as well)
-
+        // TODO be consistent with use of quotation marks (choose single quotes over double)
+        // TODO this file has too many scripts: use a separate .js file. (ideally, for the styling as well)
+        
+        // FIXME limit # of messages displayed in window (delete and move up after x, or add scrolling. Make container fixed size
+        // FIXME lobby (list of users) alternate background color is skewed
+        // TODO use a unique background color for each user's messages!
+        // TODO Show list of current peers in side pannel
+        // TODO notify other peers when new peer is added  
         //  1   SIGN IN
         //  1.a connect to host
         var socket = io(); 
@@ -119,12 +124,14 @@
         // 8    RSVP TO CHAT INVITE 
         //      User gets a chat invite from another user. User sends back yes/no reply (rsvp).
         socket.on('invite', function(invite){ // e.g.: invite = {'to':'Nikolay','from':'Ben','type':'new' }  
-            
+             
             var rsvp = {}; 
             rsvp['to'] = invite['from']; // swap to and from fields
             rsvp['from'] = invite['to'];
-            
+            rsvp['type'] = invite['type'];// server needs to know the invite type to choose the appropriate chat setup (new/private or current/group)   
+
             // prompt user to either accept or turn down the invite 
+            // TODO use invite['type'] to tell user if invited to a private or group chat
             // TODO make names bold to make it more readable 
             if (confirm(invite['from'] + ' just invited you to chat!\n Do you want to chat with '+ invite['from'] +'?')) {
                 rsvp['rsvp'] = true; 

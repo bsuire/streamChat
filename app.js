@@ -68,7 +68,7 @@ io.on('connection', function(socket){
 
         console.log(username + ' just signed in!');
         console.log('Number of users online: '+ online_users.length);
-        console.log(online_users);
+        console.log('Online users:' + online_users);
       
         //  2.b Send a list of online users to the new user  
         var matching_users = [];
@@ -119,36 +119,48 @@ io.on('connection', function(socket){
             // invitation to chat accepted. Set up connection!
             console.log(user.username + ' accepted the chat invite from '+ rsvp['to'] +'!');
             
-            // TODO move all the code for starting chats elsewhere, and split it between two different function (one for 'new', another for 'current'
-
             // FIXME disable add to current chat option if no chat currently open (or make sure that results in the same)
-            // TODO add leave chat optioni? 
-            // FIXME might be some problem between new chat/add, with the contents of broadcasts[] not having been initialized 
-            //
-            // TODO  NEW CHAT (= private, 1 to 1 chat)
-            //  9.b.A   SETUP A NEW CHAT
-            //  - (i)     remove user from each peer's own peers list
-            //  - (ii)    notify each peer that user has left conversation
-            //  - (iii)   empty user's current list of peers and add new peer 
-            //  - (iv)    update each user's peers with the other user's name
-            //  =======> users are ready to chat! 
             
-            var user1 = rsvp['to']; // note: user1 is a username, not a user object
-            var user2 = rsvp['from'];   // same --
+            var user1 = rsvp['to'];    // IMPORTANT : user1 invited user2 to chat 
+            var user2 = rsvp['from'];  // note: user1 and user2 are usernames, not user objects
             
-            // TODO: note: user2 will always quit his chat! 
+            // INVITE TO  NEW/PRIVATE CHAT
+            //  1 disconnect both users from their current peers
+            //  2 connect the two users to one another
             
-            // TODO TODO TODO use separate function that returns list of peers to notify. Notify them in here. 
-            
-            //  A.i & A.ii  remove user from the list of peers of each current peer, and notify them user has left the chat
-            // TODO make sure that these execute synchronously (don't go onward before their completion)
-            leaveCurrentChat(user1);  
-            leaveCurrentChat(user2);
-    
-            //  A.iii & A.iv - reset both users's list of peers with each other's username
-            dir[user1].peers = [user2];
-            dir[user2].peers = [user1];
+            if(rsvp['type'] === 'new'){
+                //  A.i & A.ii  remove user from the list of peers of each current peer, and notify them that user has left the chat
+                // TODO make sure that these execute synchronously (don't go onward before their completion)
+                leaveCurrentChat(user1);  
+                leaveCurrentChat(user2);
+        
+                //  A.iii & A.iv - reset both users's list of peers with each other's username
+                dir[user1].peers = [user2];
+                user.peers = [user1]; // because: user === dict[user2]
+                // TODO don't use 'user' in substitution for dir['user2'] to improve consitency and readability ?
+            }
 
+            // INVITE TO CURRENT/GROUP CHAT
+            //  1. disconnect user2 from his or her current peers
+            //  2. connect user2 to user1 and his/her peers 
+            else {
+                leaveCurrentChat(user2); // disconnets user2 from current peers
+              
+                // first connect user2 with user1's peers 
+                for (var i = 0; i < dir[user1].peers.length; i++){
+                    
+                    var username = dir[user1].peers[i]; 
+                    
+                    // Note: this.user is the user object associated user2
+                    user.peers.push(username);          // add this (user1) peer to user2's list peers
+                    dir[username].peers.push(user.username);  // add user2 to this (user1) peer's list of peers
+                }  
+
+                // second, connect user2 with user1 him/herself
+                user.peers.push(user1); // user2 === user.username
+                dir[user1].peers.push(user2); 
+            }  
+            
             // Voilà! user1 and user2 just started a private chat! 
             console.log('Peers for '+ user1 +' are '+  dir[user1].peers);
             console.log('Peers for '+ user2 +' are '+  dir[user2].peers);
@@ -193,8 +205,7 @@ io.on('connection', function(socket){
             console.log("Error on disconnect event.");
         }
         console.log('Number of users online: '+ online_users.length);
-        console.log('Online users:');
-        console.log(online_users);
+        console.log('Online users:' + online_users);
     });
 });
 
@@ -248,35 +259,3 @@ function leaveCurrentChat(username){
     // 3)   clear user's set of peers 
     dir[username].peers = [];
 }
-// addToChat : adds user1 to user2's list of peers
-//
-//  9A.iii   empty user's current list of peers and add new peer 
-//  9. A.iv    update each user's peers with the other user's name
-// TODO improve so that it works with group chats as well
-// TODO there's probably a way to make it much more elegant
-function setupChat(user1,user2){ // user1 and user2 are both usernames, not user objects
-
-    var new_recipient_1 = [];
-    var new_recipient_2 = []; 
-    
-    new_recipient_1.push(user2);
-    
-    // before starting new chat, remove user from others's lists of broadcasts , then update user's own list of broadcasts
-    delete broadcasts[user1];
-    broadcasts[user1] = new_recipient_1;
-    
-    new_recipient_2.push(user1);
-    delete broadcasts[user2];
-    broadcasts[user2] = new_recipient_2;
-    return true;
-}
-
-
-function getUserName(socketid){
-    for (var i=0; i < online_users.length; i++) {
-        if (online_users[i].socketid === socketid) {
-        return online_users[i];
-        }
-    }
-}
-
