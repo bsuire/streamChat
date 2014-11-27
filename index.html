@@ -164,16 +164,19 @@
             return false;
         });
         
-        // 12 RECEIVE MESSAGE 
+        // 12 RECEIVE MESSAGE -- can be from either a chat message or a notification from the server 
         socket.on('chat message', function(msg){
-            $('#messages').append($('<li>').text(msg['from'] + ':\t' + msg['content']));
-        });
-
-        // 13 PEER LEFT -- (13, the unlucky number. Your friends don't like you. JK =) )
-        //     a peer left. Notify user.
-        socket.on('peer left', function(peer){
-            // TODO italicize to differentiate from actual chat messages
-            $('#messages').append($('<li>').text(peer +' left this conversation'));
+            // TODO: check if origin == SERVER. IF so, italicize in order to differentiate from actual chat messges
+            if(msg['from'] === 'SERVER')
+            {
+                var notification =  msg['content'].italics();
+                notification =  msg['from'] + ':\t' + notification;
+                $('#messages').append('<li>' + notification + '</li>');
+            }
+            else
+            {
+                $('#messages').append($('<li>').text(msg['from'] + ':\t' + msg['content']));
+            }
         });
 
     </script>

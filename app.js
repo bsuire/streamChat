@@ -15,6 +15,7 @@ var io = require('socket.io')(http);
 
 var MAX_PEERS = 4; // = maximum group size - 1 
 
+// TODO rewrite [] as . notations? (clearer?) 
 
 // TODO add some constants/parameters (max group size, etc)
 // TODO better document what each global variable does (what's it for, what it stores, as what, etc)
@@ -87,9 +88,9 @@ io.on('connection', function(socket){
     // FIXME returns all users BUT yourself
     // FIXME check use case: user1 sends invite to user2 who just left the chat (but lobby wasn't updated)  
     socket.on('search', function(query){
-        console.log(user.username + ' is looking for a friend starting with '+ query ); // log message into server
+        //console.log(user.username + ' is looking for a friend starting with '+ query ); // log message into server
         var matching_users = findOnlineUsers(query);
-        console.log(matching_users);
+        //console.log(matching_users);
         socket.emit('update lobby', matching_users);
     });
     
@@ -108,6 +109,12 @@ io.on('connection', function(socket){
             console.log('CHAT INVITE REJECTED BY SERVER (group size limit reached)');
             // TODO: send back an 'rsvp' event with rsvp['error'] = 'Maximum group size limit reached' to be displayed 
             
+            // notify user who ent the invite of the error
+            var message = {};
+            message['from'] = 'SERVER';
+            message['content'] = 'Could not invite ' + invite['to'] + ' to this chat. Maximum number of peers reached!';
+            user.socket.emit('chat message', message); //dir[peers[i]] => user object corresponding to this peer
+
         } else {
             dir[invite['to']].socket.emit('invite',invite); // forward chat request to targeted user
         }
@@ -116,8 +123,8 @@ io.on('connection', function(socket){
     //  9.  FORWARD RSVP + SETUP CHAT (if applicable) 
     socket.on('rsvp', function(rsvp){ // rsvp fields: 'to', 'from', 'type' (='new' or 'current') and 'rsvp' (boolean) 
 
-        var user1 = rsvp['to'];    // note: user1 invited user2 to chat 
-        var user2 = rsvp['from'];  // note: user1 and user2 are usernames, not user objects
+        var user1 = rsvp['to'];    // user1 = inviter
+        var user2 = rsvp['from'];  // user2 = invited
         
         // forward rsvp
         //  ... BUT, if it's a group/current invite that was accepted, check again for group size limit
@@ -129,7 +136,18 @@ io.on('connection', function(socket){
             
             console.log('RSVP received from '+ rsvp['from'] +' regarding a group chat invite from '+ rsvp['to']);
             console.log('CHAT INVITE REJECTED BY SERVER (group size limit reached)');
-            // TODO: send back an 'rsvp' event with rsvp['error'] set, to BOTH users (but flip 'to' and 'from' fields)
+            
+            // notify both parties that chat invite was canceled by the server 
+            var message = {};
+            message['from'] = 'SERVER';
+           
+            // first notify inviter
+            message['content'] = 'Could not invite ' + user2 + ' to this chat. Maximum number of peers reached!';
+            dir[user1].socket.emit('chat message', message); //dir[peers[i]] => user object corresponding to this peer
+            
+            // then invitee
+            message['content'] = 'Chat invite from ' + user1 + ' canceled by the server. Maximum number of peers reached!';
+            dir[user2].socket.emit('chat message', message); //dir[peers[i]] => user object corresponding to this peer
         } 
         else {      
             // no server rejection 
@@ -280,7 +298,10 @@ function leaveCurrentChat(username){
         dir[peers[i]].peers.splice(j,1);
 
         // 2)  notify this peer
-        dir[peers[i]].socket.emit('peer left', username); //dir[peers[i]] => user object corresponding to this peer
+        var message = {};
+        message['from'] = 'SERVER';
+        message['content'] = username + ' left this conversation';
+        dir[peers[i]].socket.emit('chat message', message); //dir[peers[i]] => user object corresponding to this peer
     }
     
     // 3)   clear user's set of peers 
