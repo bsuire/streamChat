@@ -47,8 +47,6 @@ app.get('/', function(req, res){                // serve HTTP GET requests that 
 io.on('connection', function(socket){
     
     var user;       // user object for this socket connection
-    // FIXME FIXME: user objects might be modified in the directory. Are dir[username] and this.user pointing to the same structure??
-    // ..........  otherwise, move this declaration inside "sign in" event, or refresh before using: user = dir[user.username]
     //  TODO: keep peers[] and username accessible throughout? 
     //  Cons: prohibits use of these names in all functions + wastes memory.
     //  Pro:  less and more readable code: username instead of user.username, etc. 
@@ -143,34 +141,12 @@ io.on('connection', function(socket){
             // TODO TODO TODO use separate function that returns list of peers to notify. Notify them in here. 
             
             //  A.i & A.ii  remove user from the list of peers of each current peer, and notify them user has left the chat
-            var peers = dir[user1].peers;
-            
-            for(var i = 0; i < peers.length; i++){
-                
-                // A.i remove user from this peer's peers  
-                // note: dir[peers[i]] => user object corresponding to this peer
-                var j = dir[peers[i]].peers.indexOf(user1);  
-                dir[peers[i]].peers.splice(j,1);
-
-                // A.ii notify peer
-                dir[peers[i]].socket.emit('peer left', user1); //dir[peers[i]] => user object corresponding to this peer
-            } 
-
-            peers = dir[user2].peers;
-            
-            for(var i = 0; i < peers.length; i++){
-                
-                // A.i remove user from this peer's peers  
-                // note: dir[peers[i]] => user object corresponding to this peer
-                var j = dir[peers[i]].peers.indexOf(user2);  
-                dir[peers[i]].peers.splice(j,1);
-
-                // A.ii notify peer
-                dir[peers[i]].socket.emit('peer left', user2); //dir[peers[i]] => user object corresponding to this peer
-            } 
-            ///////////////
+            // TODO make sure that these execute synchronously (don't go onward before their completion)
+            leaveCurrentChat(user1);  
+            leaveCurrentChat(user2);
+    
             //  A.iii & A.iv - reset both users's list of peers with each other's username
-            dir[user1].peers = [user2]; // TODO check that this is the proper way to do this 
+            dir[user1].peers = [user2];
             dir[user2].peers = [user1];
 
             // Voilà! user1 and user2 just started a private chat! 
@@ -188,7 +164,7 @@ io.on('connection', function(socket){
         message['from'] = user.username;
         message['content'] = msg;
         
-        var to = dir[user.username].peers; // FIXME is it equivalent to user.peers, or is the latter not automatically updated?
+        var to = user.peers;
         
         for(var i=0; i < to.length; i++){
             dir[to[i]].socket.emit('chat message', message); // to[i]: a peer we need to get the message to. dir[to[i]] => its user object
@@ -205,19 +181,7 @@ io.on('connection', function(socket){
             console.log(user.username + ' disconnected');
             
             // notify peers that user disconnected
-            // TODO 3rd time that this functioni/forloop is used. I can definitely create a separate function
-            peers = dir[user.username].peers;
-            
-            for(var i = 0; i < peers.length; i++){
-                
-                //  remove user from this peer's peers  
-                var j = dir[peers[i]].peers.indexOf(user.username);  
-                dir[peers[i]].peers.splice(j,1);
-                
-                // notify peers
-                // TODO differentiate leaving from disconnecting
-                dir[peers[i]].socket.emit('peer left', user.username); //dir[peers[i]] => user object corresponding to this peer
-            }
+            leaveCurrentChat(user.username); // TODO differentiate disconnection from leaving
 
             // delete user from memory 
             var x = online_users.indexOf(user.username);
@@ -228,6 +192,7 @@ io.on('connection', function(socket){
         catch(err){ 
             console.log("Error on disconnect event.");
         }
+        console.log('Number of users online: '+ online_users.length);
         console.log('Online users:');
         console.log(online_users);
     });
@@ -258,25 +223,30 @@ function findOnlineUsers(query){
     return matching_users;  // TODO limit size? 
 }
 
-// 2 remove a user from current conversation
+// 2 leaveCurrentChat removes a user from his/her current conversation
 // --> notify current peers that user has left their conversation
 // --> remove user from each peer's own current list of peers
 // --> clear user's list of peers
 // TODO would that be better declared as a method associated to User objects 
 //   ... (pb: won't be able to save Users into a database anymore?)
+
 function leaveCurrentChat(username){
-
     var peers = dir[username].peers;
-    
+
     for(var i = 0; i < peers.length; i++){
-        var peer = user_recipients[i];
-        var peer_recipients = broadcasts[peer];
 
-    } 
+        //  1) remove user from this peer's own set of peers 
+        //  TODO expand following statements to make them more explicit
+        // note: dir[peers[i]] => user object corresponding to this peer
+        var j = dir[peers[i]].peers.indexOf(username);  
+        dir[peers[i]].peers.splice(j,1);
 
+        // 2)  notify this peer
+        dir[peers[i]].socket.emit('peer left', username); //dir[peers[i]] => user object corresponding to this peer
+    }
     
-    var user_recipients = broadcasts[user];
-    
+    // 3)   clear user's set of peers 
+    dir[username].peers = [];
 }
 // addToChat : adds user1 to user2's list of peers
 //
