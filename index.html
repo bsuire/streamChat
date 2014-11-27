@@ -51,88 +51,122 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jquery-2.1.1.min.js"></script>
     <script>
-        // connect socket to host 
-        var socket = io();
+        // TODO: be consistent with use of quotation marks (choose single quotes over double)
+        // TODO: this file has too many scripts: use a separate .js file. (ideally, for the styling as well)
 
-        // promt user for name 
-        var person = prompt("Please enter your name");
-        while (!(/\S/.test(person))) {
-            person = prompt("Your name cannot be left blank! Please enter your name again");
+        //  1   SIGN IN
+        //  1.a connect to host
+        var socket = io(); 
+
+        //  1.b Prompt user for name
+        var my_username = prompt("Please enter your name");
+
+        //  1.c Check that username is valid: /\S/ checks that there is at least one none blank character in the name provided
+        // TODO: limmit username length to something reasonable (that won't break the display)
+        while (!(/\S/.test(my_username))) {
+            my_username = prompt("Your name cannot be left blank! Please enter your name again");
         }
-        socket.emit('user name',person);
 
-        // search for other users online (submitted everytime text input in search box is changed) 
-        $("#search").on("input", function() {
-            socket.emit('search',$('#search').val());
-        });
+        //  1.d send username to server
+        // TODO: put the init/username forward into a function triggered inside the while loop so that we can use var data
+        // TODO ... without it being in the scope of other  functions/event (can you redeclare variable inside a function without integrity conflict?)
+        socket.emit('sign in',my_username); 
+
         
-        // initialize list with online users  
-        //$( document ).ready() 
-        // update online users
-        socket.on('update users', function(user_list){
+        //  3   UPDATE LOBBY (list of online users)
+        // TODO implement scrolling in lobby (userlist) or make sure server always limits the number of users to what's visible
+        socket.on('update lobby', function(users_list){
+            
+            // 3.a clear lobby 
             $('#users').empty();
-            for(var i=0; i < user_list.length; i++){
-                $('#users').append($('<li draggable="true" ondragstart="drag(event)">').text(user_list[i]));
+
+            // 3.b add users to lobby 
+            for(var i=0; i < users_list.length; i++){
+                $('#users').append($('<li draggable="true" ondragstart="drag(event)">').text(users_list[i]));
             }
         });
-        function allowDrop(ev) {
+        
+        //  4   SEARCH FOR USERS
+        // search for other users online (submitted everytime text input in search box is changed) 
+        $("#search").on("input", function() {
+            socket.emit('search',$('#search').val()); // emit search event and pass query/content of search box
+        });
+
+
+        //  6   SEND A CHAT INVITE
+        //       Drag and drop someone's name in order to send him/her an invite  
+        function drop(ev,type) { 
+            ev.preventDefault();
+            var peer_username = ev.dataTransfer.getData("text"); // drag and drop transfers username
+            var invite = {}; 
+            invite['type'] = type; // type = 'new' or 'current' (chat with this user only, or add user to current chat) 
+            invite['to'] = peer_username;
+            invite['from'] = my_username; 
+            console.log('Inviting ' + peer_username +' to '+ type + ' chat');
+            socket.emit('invite', invite);
+        }
+        
+        // functions to enable drag and drop
+        function allowDrop(ev) { // TODO explain what default event is
             ev.preventDefault();
         }
         
         function drag(ev) {
-            ev.dataTransfer.setData("text", ev.target.innerHTML);
-            var data = ev.dataTransfer.getData("text");
+            ev.dataTransfer.setData("text", ev.target.innerHTML); // sets username contained in dragged element as transfer data
         }
-
-        function drop(ev,type) {
-            ev.preventDefault();
-            var username = ev.dataTransfer.getData("text");
-            var add_request = {}; 
-            add_request['type'] = type; 
-            add_request['to'] = username; 
-            // alert("Sent chat request to " + username); 
-            socket.emit('add to chat',add_request);
-            console.log(("Adding " + username +" to "+ type + "  chat")); 
-        }
-
-        // TODO rename all add_req and add_request to chat_req
-        // TODO change event sequence names to: send invite, forward invite, and RSVP
-        socket.on('chat request', function(chat_req){
+        
+        
+        // 8    RSVP TO CHAT INVITE 
+        //      User gets a chat invite from another user. User sends back yes/no reply (rsvp).
+        socket.on('invite', function(invite){ // e.g.: invite = {'to':'Nikolay','from':'Ben','type':'new' }  
             
             var rsvp = {}; 
-            rsvp['to'] = chat_req['from'];
-            rsvp['from'] = chat_req['to'];
+            rsvp['to'] = invite['from']; // swap to and from fields
+            rsvp['from'] = invite['to'];
             
-            if (confirm(chat_req['from'] + ' just sent you a chat request?\n Wanna talk to '+ chat_req['from'] +'?')) {
+            // prompt user to either accept or turn down the invite 
+            // TODO make names bold to make it more readable 
+            if (confirm(invite['from'] + ' just invited you to chat!\n Do you want to chat with '+ invite['from'] +'?')) {
                 rsvp['rsvp'] = true; 
             } else {
                 rsvp['rsvp'] = false; 
             }
-            
-            socket.emit('RSVP', rsvp);
+            // send rsvp 
+            socket.emit('rsvp', rsvp); // ('rsvp' socket event, rsvp associative array, and rsvp.rsvp = true/false. RSVPs everywhere...)
         });
 
-        // Incoming RSVP for chat invite
-        socket.on('RSVP', function(rsvp){
+        //  10  RECEIPT OF RSVP
+        socket.on('rsvp', function(rsvp){
             
             if (rsvp['rsvp'] === true){
-                alert('Great news! '+ rsvp['from'] +' accepted the request to chat :)');
+                alert('Awesome! '+ rsvp['from'] +' accepted your chat invite :)');
             } else {
-                alert('Sorry! '+ rsvp['from'] + ' turned down the request to chat :(');
+                alert('Sorry! '+ rsvp['from'] + ' turned down your chat invite :(');
             } 
         });    
         
-        // send message 
+        // TODO UI: add scrolling to fit all messages (in general, UI would require tons of improvements before release day)
+
+        //  11 SEND MESSAGE 
         $('form').submit(function(){
             socket.emit('chat message', $('#m').val());
             $('#messages').append($('<li>').text('You:\t' + $('#m').val()));
             $('#m').val('');
             return false;
         });
-        // receive message
+        
+        // 12 RECEIVE MESSAGE 
         socket.on('chat message', function(msg){
             $('#messages').append($('<li>').text(msg['from'] + ':\t' + msg['content']));
         });
+
+        // 13 PEER LEFT -- (13, the unlucky number. Your friends don't like you. JK =) )
+        //     a peer left. Notify user.
+        socket.on('peer left', function(peer){
+            // TODO italicize to differentiate from actual chat messages
+            $('#messages').append($('<li>').text(peer +' left this conversation'));
+        });
+
     </script>
 </body>
 </html>
