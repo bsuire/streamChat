@@ -162,7 +162,7 @@ io.on('connection', function(socket){
                 
                 // A.i remove user from this peer's peers  
                 // note: dir[peers[i]] => user object corresponding to this peer
-                var j = dir[peers[i]].peers.indexOf(user1);  
+                var j = dir[peers[i]].peers.indexOf(user2);  
                 dir[peers[i]].peers.splice(j,1);
 
                 // A.ii notify peer
@@ -188,28 +188,48 @@ io.on('connection', function(socket){
         message['from'] = user.username;
         message['content'] = msg;
         
-        console.log('message: ' + msg); // log message into server
         var to = dir[user.username].peers; // FIXME is it equivalent to user.peers, or is the latter not automatically updated?
+        
         for(var i=0; i < to.length; i++){
             dir[to[i]].socket.emit('chat message', message); // to[i]: a peer we need to get the message to. dir[to[i]] => its user object
         }
+        console.log('\n' + user.username + ' to:');
+        console.log(to);
+        console.log('message: ' + msg + '\n');
     });
 
     // user disconnects. Remove user from online users list
     socket.on('disconnect', function(){
+        // FIXME user undefined error! (timeouts?)
         try{
-            var username = user.username;
-            console.log(username + ' disconnected');
+            console.log(user.username + ' disconnected');
+            
+            // notify peers that user disconnected
+            // TODO 3rd time that this functioni/forloop is used. I can definitely create a separate function
+            peers = dir[user.username].peers;
+            
+            for(var i = 0; i < peers.length; i++){
+                
+                //  remove user from this peer's peers  
+                var j = dir[peers[i]].peers.indexOf(user.username);  
+                dir[peers[i]].peers.splice(j,1);
+                
+                // notify peers
+                // TODO differentiate leaving from disconnecting
+                dir[peers[i]].socket.emit('peer left', user.username); //dir[peers[i]] => user object corresponding to this peer
+            }
+
+            // delete user from memory 
+            var x = online_users.indexOf(user.username);
+            online_users.splice(x,1);
+
+            delete dir[user.username];
         } 
         catch(err){ 
             console.log("Error on disconnect event.");
-        } 
-        
-        var i = online_users.indexOf(user);
-        online_users.splice(i,1);
-        sockets[user.username] = null;
+        }
+        console.log('Online users:');
         console.log(online_users);
-        console.log(sockets);
     });
 });
 
@@ -230,8 +250,8 @@ function findOnlineUsers(query){
     var matching_users = []
     var string_length = query.length;
     for (var i=0; i < online_users.length; i++){
-        if (online_users[i].username.substring(0,string_length) === query){
-            matching_users.push(online_users[i].username);
+        if (online_users[i].substring(0,string_length) === query){
+            matching_users.push(online_users[i]);
         }
     }
     // TODO make sure that this does not yield an error if empty (I don't think it should however)

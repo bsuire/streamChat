@@ -128,6 +128,7 @@
             // TODO make names bold to make it more readable 
             if (confirm(invite['from'] + ' just invited you to chat!\n Do you want to chat with '+ invite['from'] +'?')) {
                 rsvp['rsvp'] = true; 
+                // TODO: append to messages: "You are now talking to: [updated list of peers] " 
             } else {
                 rsvp['rsvp'] = false; 
             }
@@ -140,6 +141,7 @@
             
             if (rsvp['rsvp'] === true){
                 alert('Awesome! '+ rsvp['from'] +' accepted your chat invite :)');
+                // TODO: append to messages: "You are now talking to: [updated list of peers] " 
             } else {
                 alert('Sorry! '+ rsvp['from'] + ' turned down your chat invite :(');
             } 
