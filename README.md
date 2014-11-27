@@ -24,7 +24,7 @@ streamChat uses socket.io for real-time communications between users, and used t
   - jQuery
 
 
-### Running the application
+### Running the application (locally)
 
 ##### 1. Download app
 
