@@ -8,11 +8,12 @@
 // 
 // List key sections ?
 
-
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+
+var MAX_PEERS = 4; // = maximum group size - 1 
 
 
 // TODO add some constants/parameters (max group size, etc)
@@ -29,7 +30,6 @@ function User(username,peers,ip,socket){ // each user object has two fields: 1. 
     // this.status = status;   // is user online or offline? (could be boolean variable)
     // this.banned = banned   // another boolean: have we banned usser?
     // //  email, lastname, firstname, password  ===> other fields to add if using sign up system with email authentification
-    //this.socketid = socket.id; // delete
 }
 
 app.use(express.static(__dirname + '/public', {index: false})); // indicates where static files are located 
@@ -96,76 +96,103 @@ io.on('connection', function(socket){
     //  7.  FORWARD INVITE
     socket.on('invite', function(invite){  // e.g.: invite = {'to':'Nikolay','from':'Ben','type':'new' } 
         
-        // TODO check if same and group size limit reached/
+        console.log('Chat invite from '+ user.username +' to '+ invite['to'] + ' of type '+ invite['type']);
+        
+        // TODO check if same and group size limit reached
         // TODO add some kind of request time out to have invites expire
         
-        // NOTE: having the server set this field = more secure?
-        //invite['from'] = user.username; 
-        
-        dir[invite['to']].socket.emit('invite',invite); // forward chat request to targeted user
-        
-        console.log("Chat invite from "+ user.username +" to "+ invite['to'] + " of type "+ invite['type']);
+        // forward chat invite
+        // ... BUT NOT if it's an invite for a group convo and user already has 4 peers (= max allowed)
+        if (invite['type'] === 'current' &&  user.peers.length === MAX_PEERS) { 
+
+            console.log('CHAT INVITE REJECTED BY SERVER (group size limit reached)');
+            // TODO: send back an 'rsvp' event with rsvp['error'] = 'Maximum group size limit reached' to be displayed 
+            
+        } else {
+            dir[invite['to']].socket.emit('invite',invite); // forward chat request to targeted user
+        }
     });
 
     //  9.  FORWARD RSVP + SETUP CHAT (if applicable) 
-    socket.on('rsvp', function(rsvp){ // rsvp has: 'to', 'from', and 'rsvp' (boolean) fields
-        
-        // 9.a  forward rsvp to sender
-        dir[rsvp['to']].socket.emit('rsvp', rsvp);
-        
-        if (rsvp['rsvp'] === false){
-            console.log(user.username +' turned down the chat invite from '+ rsvp['to'] + '!');
-        } else {
-            // invitation to chat accepted. Set up connection!
-            console.log(user.username + ' accepted the chat invite from '+ rsvp['to'] +'!');
-            
-            // FIXME disable add to current chat option if no chat currently open (or make sure that results in the same)
-            
-            var user1 = rsvp['to'];    // IMPORTANT : user1 invited user2 to chat 
-            var user2 = rsvp['from'];  // note: user1 and user2 are usernames, not user objects
-            
-            // INVITE TO  NEW/PRIVATE CHAT
-            //  1 disconnect both users from their current peers
-            //  2 connect the two users to one another
-            
-            if(rsvp['type'] === 'new'){
-                //  A.i & A.ii  remove user from the list of peers of each current peer, and notify them that user has left the chat
-                // TODO make sure that these execute synchronously (don't go onward before their completion)
-                leaveCurrentChat(user1);  
-                leaveCurrentChat(user2);
-        
-                //  A.iii & A.iv - reset both users's list of peers with each other's username
-                dir[user1].peers = [user2];
-                user.peers = [user1]; // because: user === dict[user2]
-                // TODO don't use 'user' in substitution for dir['user2'] to improve consitency and readability ?
-            }
+    socket.on('rsvp', function(rsvp){ // rsvp fields: 'to', 'from', 'type' (='new' or 'current') and 'rsvp' (boolean) 
 
-            // INVITE TO CURRENT/GROUP CHAT
-            //  1. disconnect user2 from his or her current peers
-            //  2. connect user2 to user1 and his/her peers 
-            else {
-                leaveCurrentChat(user2); // disconnets user2 from current peers
-              
-                // first connect user2 with user1's peers 
-                for (var i = 0; i < dir[user1].peers.length; i++){
-                    
-                    var username = dir[user1].peers[i]; 
-                    
-                    // Note: this.user is the user object associated user2
-                    user.peers.push(username);          // add this (user1) peer to user2's list peers
-                    dir[username].peers.push(user.username);  // add user2 to this (user1) peer's list of peers
-                }  
+        var user1 = rsvp['to'];    // note: user1 invited user2 to chat 
+        var user2 = rsvp['from'];  // note: user1 and user2 are usernames, not user objects
+        
+        // forward rsvp
+        //  ... BUT, if it's a group/current invite that was accepted, check again for group size limit
+        //  ... (user1 may have invited other user(s) in the meantime)
+        
+        //  case: server rejection
+        
+        if (rsvp['rsvp'] === true && rsvp['type'] === 'current' && dir[user1].peers.length === MAX_PEERS){
+            
+            console.log('RSVP received from '+ rsvp['from'] +' regarding a group chat invite from '+ rsvp['to']);
+            console.log('CHAT INVITE REJECTED BY SERVER (group size limit reached)');
+            // TODO: send back an 'rsvp' event with rsvp['error'] set, to BOTH users (but flip 'to' and 'from' fields)
+        } 
+        else {      
+            // no server rejection 
+            
+            // clear to forward rsvp as is 
+            dir[user1].socket.emit('rsvp', rsvp);
+           
+            if (rsvp['rsvp'] === false){
 
-                // second, connect user2 with user1 him/herself
-                user.peers.push(user1); // user2 === user.username
-                dir[user1].peers.push(user2); 
+                // invitation to chat rejected by user. Do nothing
+                
+                console.log(user2 +' rejected the chat invite from '+ user1 + '!');
+            
+            } else {
+
+                // invitation to chat accepted. Log Set up connection!
+                
+                console.log(user2 + ' accepted the chat invite from '+ user1 +'!');
+                
+                // INVITE TO  NEW/PRIVATE CHAT
+                //  1 disconnect both users from their current peers
+                //  2 connect the two users to one another
+                if(rsvp['type'] === 'new'){
+                
+                    //  A.i & A.ii - remove user from the list of peers of each current peer, and notify them that user has left the chat
+                    // TODO make sure that these execute synchronously (don't go onward before their completion)
+                    leaveCurrentChat(user1);  
+                    leaveCurrentChat(user2);
+            
+                    //  A.iii & A.iv - reset both users's list of peers with each other's username
+                    dir[user1].peers = [user2];
+                    user.peers = [user1]; // because: user === dict[user2]
+                    
+                    // TODO don't use 'user' in substitution for dir['user2'] to improve consitency and readability ?
+                }
+
+                // INVITE TO CURRENT/GROUP CHAT
+                //  1. disconnect user2 from his or her current peers
+                //  2. connect user2 to user1 and his/her peers 
+                else {
+                
+                    leaveCurrentChat(user2); // disconnets user2 from current peers
+                  
+                    // first connect user2 with user1's peers 
+                    for (var i = 0; i < dir[user1].peers.length; i++){
+                        
+                        var username = dir[user1].peers[i]; 
+                        
+                        // Note: this.user is the user object associated user2
+                        user.peers.push(username);          // add this (user1) peer to user2's list peers
+                        dir[username].peers.push(user.username);  // add user2 to this (user1) peer's list of peers
+                    }  
+
+                    // second, connect user2 with user1 him/herself
+                    user.peers.push(user1); // user2 === user.username
+                    dir[user1].peers.push(user2);
+                }
             }  
             
-            // Voilà! user1 and user2 just started a private chat! 
-            console.log('Peers for '+ user1 +' are '+  dir[user1].peers);
-            console.log('Peers for '+ user2 +' are '+  dir[user2].peers);
+            // Voila! user1 and user2 just started a private chat! 
+            console.log('Chat room updated!  '+ user1 + ',' +  dir[user1].peers + ' are now chatting together!');
+            //console.log('Peers for '+ user2 +' are '+  dir[user2].peers);
 
-            // TODO CURRENT CHAT (= group chat, by adding a 3rd, 4th or 5th peer to current chat)
             
         }
     });
@@ -181,7 +208,7 @@ io.on('connection', function(socket){
         for(var i=0; i < to.length; i++){
             dir[to[i]].socket.emit('chat message', message); // to[i]: a peer we need to get the message to. dir[to[i]] => its user object
         }
-        console.log('\n' + user.username + ' to:');
+        console.log(user.username + ' to:');
         console.log(to);
         console.log('message: ' + msg + '\n');
     });
@@ -220,8 +247,8 @@ http.listen(3000, function(){
 // FIXME make search case insensitive  
 // TODO sort matching users to make querying faster (but do that at the right place (scope, frequency)
 // FIXME limit number of users returrned in matching users (we probably don't want 1000 users.  
-// FIXME make sure than no empty list is displayed if function is too long (serialize). 
-// ...  However, that shouldn't occur because function is returning a value, and not used as a process 
+// TODO  make sure than no empty list is displayed if function takes too long to execute. 
+// ...  However, that really shouldn't occur because function is returning a value, and not used as a process 
 function findOnlineUsers(query){
     var matching_users = []
     var string_length = query.length;
