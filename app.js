@@ -126,6 +126,11 @@ io.on('connection', function(socket){
         var user1 = rsvp['to'];    // user1 = inviter
         var user2 = rsvp['from'];  // user2 = invited
         
+        // Prepare notification message from server //
+        // (either to notify in case sever nullifies invite, or to notify other group chat members of the new user's arrival)
+        var message = {};
+        message['from'] = 'SERVER';
+        
         // forward rsvp
         //  ... BUT, if it's a group/current invite that was accepted, check again for group size limit
         //  ... (user1 may have invited other user(s) in the meantime)
@@ -138,8 +143,6 @@ io.on('connection', function(socket){
             console.log('CHAT INVITE REJECTED BY SERVER (group size limit reached)');
             
             // notify both parties that chat invite was canceled by the server 
-            var message = {};
-            message['from'] = 'SERVER';
            
             // first notify inviter
             message['content'] = 'Could not invite ' + user2 + ' to this chat. Maximum number of peers reached!';
@@ -190,15 +193,21 @@ io.on('connection', function(socket){
                 else {
                 
                     leaveCurrentChat(user2); // disconnets user2 from current peers
-                  
+                    
+                    // prepare notification message 
+                    message['content'] = user1 + ' just added ' + user2 + ' to this conversation !';
+                    
                     // first connect user2 with user1's peers 
                     for (var i = 0; i < dir[user1].peers.length; i++){
                         
                         var username = dir[user1].peers[i]; 
-                        
+                        // TODO notify each third party peers that we've added user 2 to their chat    
                         // Note: this.user is the user object associated user2
                         user.peers.push(username);          // add this (user1) peer to user2's list peers
                         dir[username].peers.push(user.username);  // add user2 to this (user1) peer's list of peers
+                        
+                        // notify the peer that he/she is now talking to user2 as well
+                        dir[username].socket.emit('chat message', message); //dir[peers[i]] => user object corresponding to this peer
                     }  
 
                     // second, connect user2 with user1 him/herself
