@@ -6,11 +6,12 @@ streamChat uses socket.io for real-time communications between users, and used t
 
 **CURRENTLY IN DEVELOPMENT**
 
-### Features  
- - group chat (up to 5 peope)
- - look up online users
- - ban users
- - image/video sharing
+### Features
+ - [x] one on one chat
+ - [x] group chat (up to 5 peope)
+ - [x] look up online users
+ - [ ] ban users
+ - [ ] image/video sharing
 
 ### Technology
 
