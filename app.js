@@ -90,7 +90,7 @@ io.on('connection', function(socket){
     // FIXME check use case: user1 sends invite to user2 who just left the chat (but lobby wasn't updated)  
     socket.on('search', function(query){
         //console.log(user.username + ' is looking for a friend starting with '+ query ); // log message into server
-        var matching_users = findOnlineUsers(query);
+        var matching_users = findOnlineUsers(query,user.username);
         //console.log(matching_users);
         socket.emit('update lobby', matching_users);
     });
@@ -278,10 +278,11 @@ io.on('connection', function(socket){
     });
 });
 
+// setup server to listen for requests at the environement's IP, and the specified port (defaults to 3000)
 var port = process.env.PORT || 3000;
-    http.listen(port, function () {
-      var addr = http.address();
-        console.log('listening on http://' + addr.address + ':' + addr.port);
+http.listen(port, function () {
+    var addr = http.address();
+    console.log('listening on http://' + addr.address + ':' + addr.port);
 });
 
 
@@ -294,16 +295,15 @@ var port = process.env.PORT || 3000;
 // FIXME limit number of users returrned in matching users (we probably don't want 1000 users.  
 // TODO  make sure than no empty list is displayed if function takes too long to execute. 
 // ...  However, that really shouldn't occur because function is returning a value, and not used as a process 
-function findOnlineUsers(query){
+function findOnlineUsers(query,user){ // query = user string input ('Be'), user = user's username
     var matching_users = []
     var string_length = query.length;
     for (var i=0; i < online_users.length; i++){
-        if (online_users[i].substring(0,string_length) === query){
+        if (online_users[i].substring(0,string_length) === query && online_users[i] !== user){
             matching_users.push(online_users[i]);
         }
     }
-    // TODO make sure that this does not yield an error if empty (I don't think it should however)
-    return matching_users;  // TODO limit size? 
+    return matching_users; 
 }
 
 // 2 leaveCurrentChat removes a user from his/her current conversation
