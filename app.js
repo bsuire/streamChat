@@ -286,51 +286,56 @@ http.listen(port, function () {
 });
 
 
+// FUNCTIONS
 
-// HELPER FUNCTIONS
+// 1 findOnlineUsers(query,user). Returns a list of usernames matching the prefix contained in query
 
-// 1 find online users. Cue: 'search' event (part 5)
 // FIXME make search case insensitive  
-// TODO sort matching users to make querying faster (but do that at the right place (scope, frequency)
-// FIXME limit number of users returrned in matching users (we probably don't want 1000 users.  
-// TODO  make sure than no empty list is displayed if function takes too long to execute. 
-// ...  However, that really shouldn't occur because function is returning a value, and not used as a process 
+
+// TODO: with a large number of online users, a more efficient search algorithm would be:
+// 1. sort array
+// 2. find first and last matching element
+// 3. get slice of array from first to last match
+// or even fancier, store online users in a prefix tree  
+
 function findOnlineUsers(query,user){ // query = user string input ('Be'), user = user's username
     var matching_users = []
     var string_length = query.length;
+    
     for (var i=0; i < online_users.length; i++){
+      
         if (online_users[i].substring(0,string_length) === query && online_users[i] !== user){
             matching_users.push(online_users[i]);
         }
+        if (matching_users.length === 15) break;
     }
     return matching_users; 
 }
 
 // 2 leaveCurrentChat removes a user from his/her current conversation
-// --> notify current peers that user has left their conversation
-// --> remove user from each peer's own current list of peers
+// --> notifies current peers that user has left their conversation
+// --> remove user from each peer's own list of peers
 // --> clear user's list of peers
-// TODO would that be better declared as a method associated to User objects 
-//   ... (pb: won't be able to save Users into a database anymore?)
 
 function leaveCurrentChat(username){
+    // prepare notification message
+    var message = {};
+    message['from'] = 'SERVER';
+    
     var peers = dir[username].peers;
 
     for(var i = 0; i < peers.length; i++){
 
-        //  1) remove user from this peer's own set of peers 
-        //  TODO expand following statements to make them more explicit
+        //  remove user from this peer's own set of peers 
         // note: dir[peers[i]] => user object corresponding to this peer
+        
         var j = dir[peers[i]].peers.indexOf(username);  
         dir[peers[i]].peers.splice(j,1);
 
-        // 2)  notify this peer
-        var message = {};
-        message['from'] = 'SERVER';
+        //  notify this peer
         message['content'] = username + ' left this conversation';
-        dir[peers[i]].socket.emit('chat message', message); //dir[peers[i]] => user object corresponding to this peer
+        dir[peers[i]].socket.emit('chat message', message);
     }
-    
     // 3)   clear user's set of peers 
     dir[username].peers = [];
 }
