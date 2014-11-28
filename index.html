@@ -166,14 +166,14 @@
         //  11 SEND MESSAGE 
         $('form').submit(function(){
             socket.emit('chat message', $('#m').val());
-            $('#messages').append($('<li>').text('You:\t' + $('#m').val()));
+            $('#messages').append($('<li style="color:gray; font-weight: 100;">').text('You:\t' + $('#m').val()));
             $('#m').val('');
             return false;
         });
         
         // 12 RECEIVE MESSAGE -- can be from either a chat message or a notification from the server 
         socket.on('chat message', function(msg){
-            // TODO: check if origin == SERVER. IF so, italicize in order to differentiate from actual chat messges
+            // TODO: assign a different color to each user
             if(msg['from'] === 'SERVER')
             {
                 var notification =  msg['content'].italics();
