@@ -1,7 +1,8 @@
 streamChat
 ==========
 
-streamChat is a Node.js browser chat web application.
+streamChat is a Node.js browser chat web application, available here: https://stream-chat-plus.herokuapp.com/
+
 streamChat uses socket.io for real-time communications between users, and used the demo http://socket.io/get-started/chat/ as a boilerplate.
 
 **CURRENTLY IN DEVELOPMENT**
