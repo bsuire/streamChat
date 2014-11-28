@@ -17,7 +17,8 @@ var MAX_PEERS = 4; // = maximum group size - 1
 
 // TODO rewrite [] as . notations? (clearer?) 
 
-// TODO add some constants/parameters (max group size, etc)
+// TODO redirect console.log into a log file
+
 // TODO better document what each global variable does (what's it for, what it stores, as what, etc)
 // TODO save sockets into a database in order to be able to recover in case of crash (and make list of registered users persistent)
 var dir = {}; // list of all User objects, accessed using their respective usernames as keys.
@@ -255,7 +256,7 @@ io.on('connection', function(socket){
         } 
         catch(err){
             // this error appears every now and then, but app remains fully fonctional anyhow  
-            console.log('ERROR ON DISCONNECT EVENT: disconnect event fired, but user.username was undefined ');
+            console.log('WARNING: errorr on disconnect event (user.username undefined)');
         }
         console.log('Number of users online: '+ online_users.length);
         console.log('Online users:' + online_users);
@@ -277,10 +278,13 @@ io.on('connection', function(socket){
     });
 });
 
-
-http.listen(3000, function(){
-    console.log('listening on *:3000');
+var port = process.env.PORT || 3000;
+    http.listen(port, function () {
+      var addr = http.address();
+        console.log('listening on http://' + addr.address + ':' + addr.port);
 });
+
+
 
 // HELPER FUNCTIONS
 
