@@ -223,7 +223,6 @@ io.on('connection', function(socket){
             
         }
     });
-     // TODO log message sent directly into one's chat interface. Also: display name of sender
     // message received
     socket.on('chat message', function(msg){
         message={};
@@ -235,9 +234,8 @@ io.on('connection', function(socket){
         for(var i=0; i < to.length; i++){
             dir[to[i]].socket.emit('chat message', message); // to[i]: a peer we need to get the message to. dir[to[i]] => its user object
         }
-        console.log(user.username + ' to:');
-        console.log(to);
-        console.log('message: ' + msg + '\n');
+        console.log(user.username + ' to:' + to);
+        console.log('message: ' + msg);
     });
 
     // user disconnects. Remove user from online users list
@@ -255,11 +253,27 @@ io.on('connection', function(socket){
 
             delete dir[user.username];
         } 
-        catch(err){ 
-            console.log("Error on disconnect event.");
+        catch(err){
+            // this error appears every now and then, but app remains fully fonctional anyhow  
+            console.log('ERROR ON DISCONNECT EVENT: disconnect event fired, but user.username was undefined ');
         }
         console.log('Number of users online: '+ online_users.length);
         console.log('Online users:' + online_users);
+    });
+
+    // FIXME bug: sometimes, dir{} and online_users[] are non-empty after all chat windows have been closed...
+    // we monitor additional events to investigate
+    socket.on('error', function(err){
+        console.log('UNEXPECTED EVENT : error');
+    });
+    socket.on('reconnect', function(nb_attemps){
+        console.log('UNEXPECTED EVENT : reconnect');
+    });
+    socket.on('reconnect_attempt', function(){
+        console.log('UNEXPECTED EVENT : reconnect_attempt');
+    });
+    socket.on('reconnect_error', function(err){
+        console.log('UNEXPECTED EVENT : reconnect_error');
     });
 });
 
