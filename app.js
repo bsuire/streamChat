@@ -64,7 +64,7 @@ io.on('connection', function(socket){
         var ip = socket.handshake.address; // IP address can be useful to block or geolocalise user 
         
         // first check that IP is cleared
-        if (ip_blacklist.indexOf(ip) !== -1 ){
+        if (ip_blacklist.indexOf(socket.handshake.address) !== -1 ){
             
             var msg = {};
             msg['from'] = 'SERVER';
@@ -75,7 +75,7 @@ io.on('connection', function(socket){
         else
         {
             // sign in user
-            user = new User(username,peers,ip,socket);
+            user = new User(username,peers,socket.handshake.address,socket);
             
             dir[username] = user;         // add user to directory
             online_users.push(username);  // add user to list of online users
