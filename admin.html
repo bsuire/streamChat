@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+    <title>streamAdmin</title>
+    <link href="/style.css" rel="stylesheet" type="text/css">
+    
+    <style>
+        #container1 { padding: 30px; text-align:center; height:300px; width:1000px;  margin-left: auto; margin-right:auto;}  
+        h1 { padding: 10px;} 
+        h3 { padding: 5px;} 
+        #user { padding: 18px; text-align:center; }
+        button { padding: 20px; } 
+    </style> 
+</head>
+<body>
+    <!--<script src="http://stream-chat-plus.herokuapp.com/socket.io/socket.io.js"></script>--> 
+    <script src="http://0.0.0.0:3000/socket.io/socket.io.js"></script> 
+    <script src="/js/jquery-2.1.1.min.js"></script>
+    <div id="container1"> 
+    <h1> Hello Admin !</h1> 
+    <h3> Welcome to the first ever non-password protected admin page </h3> 
+    <h3> Please enter the username of the user you need to ban in the box below </h3> 
+    <div id="container"> 
+        <form action="">
+            <input id="user" type="text" placeholder="username"/><button> Ban ! </button>
+        </form>
+    </div>
+    <script>
+        //FIXME find solution for sourcing socket-io from here    
+        // TODO add option to enter IP's to Ban
+        // ban should also be reversible
+         
+    var socket = io(); 
+
+    $('form').submit(function(){
+        
+        var user =  $('#user').val();
+        
+        if( confirm('Are you sure you want to ban ' + user + ' ?')){ 
+            // send ban request
+            socket.emit('ban user', $('#user').val());
+            
+            alert('Banned ' + user); // confirm ban request has been sent
+        }
+            
+        $('#user').val(''); // reset message input box
+         
+        return false;
+
+        // TODO display confirmation message from server
+    });
+
+    </script>
+</body>
+</html>

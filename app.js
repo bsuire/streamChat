@@ -45,9 +45,12 @@ http.listen(port, function () {
 app.use(express.static(__dirname + '/public', {index: false}));
 
 app.get('/', function(req, res){               
-    res.status(200).sendFile(__dirname + '/index.html');  
+    res.status(200).sendFile(__dirname + '/index.html'); // chat UI 
 });
 
+app.get('/admin', function(req, res){               
+    res.status(200).sendFile(__dirname + '/admin.html');   
+});
 
 //  SOCKET.IO SERVER 
 io.on('connection', function(socket){
@@ -59,7 +62,7 @@ io.on('connection', function(socket){
         
         var peers = [];  
         var ip = socket.handshake.address; // IP address can be useful to block or geolocalise user 
-
+        
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
             
@@ -68,7 +71,7 @@ io.on('connection', function(socket){
             msg['content'] = 'We are sorry but it appears you have been banned from our service';  
             socket.emit('message', msg); 
         }
-        // FIXME here, add elsif to check that chosen username is not already used 
+        // FIXME here, insert else-if statements to handle cases: 1. username already taked. 2. username is blank 
         else
         {
             // sign in user
@@ -100,6 +103,8 @@ io.on('connection', function(socket){
     socket.on('invite', function(invite){  // e.g.: invite = {'to':'Nikolay','from':'Ben','type':'new' } 
         
         // TODO add some kind of request time out to have invites expire (appending a timestamp to the message)
+        // unless chat is tabbed,  need to prvent case of user A accepting user B's invitation to private chat 
+        // X minutes later, and B is now involved with another conversation
         
         // Prepare notification message from server
         var msg = {};
@@ -128,9 +133,6 @@ io.on('connection', function(socket){
     //  IV.  SETUP CHAT (or not) 
     socket.on('rsvp', function(rsvp){ // rsvp.type = 'new' or 'current' and rsvp.rsvp = boolean 
 
-        // FIXME add rsvp timeout period (user has 1 minutes to accept). Or do tabbed chat to prevent the case of
-        //  an invited accepting a private X minutes later, and user has joined another conversation
-
         var inviter = rsvp['to'];   
         var invited = rsvp['from']; // = user.username
         
@@ -156,7 +158,7 @@ io.on('connection', function(socket){
             // b. invited accepted chat invite but in the meantime inviter went offline (expired invite)
             // --> notify invited
             msg['content'] = invite['to'] + ' has gone offline.';
-            user.socket.emit('message', msg);
+            dir[invited].socket.emit('message', msg);
         }
 
         else if ( rsvp['type'] === 'current' && dir[inviter].peers.length === MAX_PEERS ) {
@@ -189,7 +191,7 @@ io.on('connection', function(socket){
         }
     });
     
-    // V  DISPATCH MESSAGE
+    // V    DISPATCH MESSAGE
     socket.on('message', function(msg_in){
         
         // structure message
@@ -201,28 +203,49 @@ io.on('connection', function(socket){
         var to = user.peers;
         
         for(var i=0; i < to.length; i++){
-            dir[to[i]].socket.emit('message', msg); //
+            dir[to[i]].socket.emit('message', msg);
         }
         console.log(user.username + ' to:' + to);
-        console.log('message: ' + msg);
+        //console.log('message: ' + msg);
     });
-     
-    // VI BAN USER
+    
+    
+    // VI   BAN USER
     //
     // TODO 
     //
     //
+    socket.on('ban user', function(user){ // user = username 
+        console.log('ADMIN: ban ' + user);
+        
+        try{
+            // blacklist user's IP address (prevents next sign in)
+            // Note: because users are deleted from the directory as soon as 
+            // they disconnect this will not work if the user has alread gone offline
+            ip_blacklist.push( dir[user].ip ); 
+            
+            // kick user from chat server
+            dir[user].socket.disconnect();
+           
+            console.log(user + '  was successfully banned.');
+        }
+        catch(err){
+            console.log('Error when banning ' + user + '. User was not found and could not be banned.');
+        }
+    });
+     
     
-    // VII  DISCONNECT
+    // VII  USER DISCONNECTS
     // user disconnects. Remove user from online users list and notify peers
     socket.on('disconnect', function(){
         
         // TODO try-catch block shouldn't be necessary here anymore...
         try{
             console.log(user.username + ' disconnected');
+            // TODO differentiate disconnection from leaving
             
             // notify peers that user disconnected
-            leaveCurrentChat(user.username); // TODO differentiate disconnection from leaving
+            leaveCurrentChat(user.username); 
 
             // delete user from memory 
             var x = online_users.indexOf(user.username);
@@ -232,13 +255,13 @@ io.on('connection', function(socket){
         } 
         catch(err){
             // this error appears every now and then, but app remains fully fonctional anyhow  
-            console.log('WARNING: error on disconnect event (user.username undefined)');
+            console.log('Error: error on disconnect event (user.username undefined)');
         }
         console.log('Number of users online: '+ online_users.length);
         console.log('Online users:' + online_users);
     });
 
-    // VIII ERROR 
+    // VIII CATCH POTENTIAL ERROR EVENTS
     // Seen occuring when a user sends a message to the server after server is rebooted
     // TODO  : restore connections after a reboot 
     socket.on('error', function(err){
