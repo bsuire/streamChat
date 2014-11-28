@@ -57,11 +57,11 @@ npm install
 
 Finally, you can run the application locally with:
 ```
-node app.js
+npm start
 ```
 Which should display:
 ```
-listening on *:3000
+listening on http://0.0.0.0:3000
 ```
 To start using the chat app, open your browser at http://localhost:3000/
 
