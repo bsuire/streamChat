@@ -73,12 +73,14 @@
         //  1   SIGN IN
         //  1.a connect to host
         var socket = io(); 
-
+        
+        var my_username = 'default';
         //  1.b Prompt user for name
-        var my_username = prompt("Please enter your name");
+        my_username = prompt("Please enter your name");
 
         //  1.c Check that username is valid: /\S/ checks that there is at least one none blank character in the name provided
         // TODO: limmit username length to something reasonable (that won't break the display)
+        // TODO: limit character set to letters,numbers and spaces/underscore/dash/etc. But no '\'. 
         while (!(/\S/.test(my_username))) {
             my_username = prompt("Your name cannot be left blank! Please enter your name again");
         }
@@ -165,18 +167,18 @@
             } 
         });    
         
-        // TODO UI: add scrolling to fit all messages (in general, UI would require tons of improvements before release day)
-
+        // TODO UI: add auto scrolling to bring into view the most recent message 
+        // TODO browser notifcation when receiving message and user is not viewing page
         //  11 SEND MESSAGE 
         $('form').submit(function(){
-            socket.emit('chat message', $('#m').val());
+            socket.emit('message', $('#m').val());
             $('#messages').append($('<li style="color:gray; font-weight: 100;">').text('You:\t' + $('#m').val()));
             $('#m').val('');
             return false;
         });
         
         // 12 RECEIVE MESSAGE -- can be from either a chat message or a notification from the server 
-        socket.on('chat message', function(msg){
+        socket.on('message', function(msg){
             // TODO: assign a different color to each user
             if(msg['from'] === 'SERVER')
             {
