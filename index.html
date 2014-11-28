@@ -8,28 +8,35 @@
         
         #lobby { width: 15%; height:100%; position: absolute; top: 0px; right: 0px; border-style:solid; border-width:6px; border-color: #58ACFA; } 
         #lobbyheader p { background: #58ACFA; text-align:center; padding:10px; }
-        #dragboxes p { background: #66CCFF; text-align:center; padding:10px; border-top-style:solid; border-bottom-style:solid;  border-width:3px; border-color: #58ACFA } 
+        #dragboxes p { background: #66CCFF; text-align:center; padding:10px; border-style:solid none solid none;  border-width:3px; border-color: #58ACFA } 
         #lobby form input { width: 100%; padding:5px; }
         #lobby ul { border-bottom-style:solid; border-bottom-width:3px; border-color: #58ACFA } 
         #users { list-style-type: none; margin: 0; padding: 0; }
         #users li { padding: 5px 10px; }
         #users li:nth-child(odd) { background: #eee; }
         div dragboxes { width:100%; height: 40px; position: absolute; bottom: 0px; right: 0px; border-style:solid; border-width:5px; background: #66CCFF } 
-
-        #room form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 85%; }
-        #room form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-        #room form button { width: 9%; background: #66CCFF; border: none; padding: 10px; }
+          
+        #room { width: 85%; height:100%; position: absolute; top: 0px; left: 0px; }  
+        #chat { width: 100%; height:90%; position: absolute; top: 0px; left: 0px; border-style:solid none solid solid; border-width:6px; border-color: #58ACFA; overflow:scroll; } 
+        #chatform { width: 100%; height: 10%; position: absolute; bottom: 0px; left: 0px; border-style:solid none solid solid; border-width:6px; border-color: #58ACFA; } 
+        #room form { background: #000; padding: 3px;  width: 100%; height: 100%; }
+        #room form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; height:100%}
+        #room form button { width: 9%; background: #66CCFF; border: none; padding: 10px; height:100% }
         #messages { list-style-type: none; margin: 0; padding: 0; }
         #messages li { padding: 5px 10px; }
         #messages li:nth-child(odd) { background: #eee; }
     </style>
 </head>
 <body>
-    <div id="room" > 
-        <ul id="messages"</ul>
-        <form action="">
-            <input id="m" autocomplete="off" /><button>Send</button>
-        </form>
+    <div id="room">
+        <div id="chat"> 
+            <ul id="messages"></ul>
+        </div>
+        <div id="chatform"> 
+            <form action="">
+                <input id="m" autocomplete="off" /><button>Send</button>
+            </form>
+        </div>
     </div>
     <div id = "lobby">
         <div id = "lobbyheader">
