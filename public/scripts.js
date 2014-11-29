@@ -25,7 +25,7 @@ socket.emit('sign in',my_username);
 
 //  B   UPDATE LOBBY (automatic upon signing in)
 //      lobby = list of online users
-socket.on('update lobby', function(users_list){
+socket.on('update lobby', function(users_list,total_users){
     
     $('#users').empty(); // clean lobby
 
@@ -33,6 +33,9 @@ socket.on('update lobby', function(users_list){
     for(var i=0; i < users_list.length; i++){
         $('#users').append($('<li draggable="true" ondragstart="drag(event)">').text(users_list[i]));
     }
+    // refresh the number of users signed in
+    $('#tally').empty();
+    $('#tally').append(total_users +' users online');  
 });
 
 

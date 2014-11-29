@@ -17,7 +17,8 @@
     </div>
     <div id = "lobby">
         <div id = "lobbyheader">
-            <p> Who's Online? </p>
+            <h3> Who's Online? </h3>
+            <p id="tally"></p>
         </div>
             <form action="">
                 <input id="search" type="text" placeholder="type in friend's username" />
@@ -25,14 +26,14 @@
             <ul id="users"></ul>
         <div id = "dragboxes">
             <div id="currentchatbox" ondrop="drop(event,'current')" ondragover="allowDrop(event)">
-                <p> Add to <b>This</b> Chat </p>
+                <p> Add to <b>Current</b> Chat </p>
             </div>
             <div id="newchatbox" ondrop="drop(event,'new')" ondragover="allowDrop(event)">
-                <p> Add to <b>New</b> Chat </p>
+                <p> Start a <b>New</b> Chat </p>
             </div>
         </div>
         <div id = "lobbyfooter">
-            <p> Drag and drop users onto one of the above boxes to add them to chat </p>
+            <p> Drag and drop a user onto one of the above two boxes to add them to chat </p>
         </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>

@@ -86,7 +86,8 @@ io.on('connection', function(socket){
           
             // update lobby (online users list displayed in UI)  
             var newest_users = getMostRecentUsers();
-            socket.emit('update lobby', newest_users);
+            var total_users = online_users.length;
+            socket.emit('update lobby', newest_users,total_users);
         } 
     });
     
@@ -95,7 +96,8 @@ io.on('connection', function(socket){
     socket.on('search', function(query){
         
         var matching_users = findOnlineUsers(query,user.username);
-        socket.emit('update lobby', matching_users);
+        var total_users = online_users.length;
+        socket.emit('update lobby', matching_users,total_users);
     });
 
     
