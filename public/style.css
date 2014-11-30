@@ -12,6 +12,7 @@ body { font: 13px Helvetica, Arial; }
 #users li:nth-child(odd) { background: #eee; }
 #users li:nth-child(even) { background: #fff; }
 
+
 #room { width: 85%; height:100%; position: absolute; top: 0px; left: 0px; }  
 #chat { width: 100%; height:90%; position: absolute; top: 0px; left: 0px; border-style: solid none none solid; border-width:6px; border-color: #58ACFA; overflow:scroll; } 
 #chatform { width: 100%; height: 10%; position: absolute; bottom: 0px; left: 0px; border-style:solid none solid solid; border-width:6px; border-color: #58ACFA; } 
@@ -20,6 +21,5 @@ body { font: 13px Helvetica, Arial; }
 #room form button { width: 9.6%; background: #66CCFF; margin: 1px 0.2%; border: none; padding: 10px; height:100% }
 #messages { list-style-type: none; margin: 0; padding: 0; }
 #messages li { padding: 5px 10px; }
-#messages li:nth-child(odd) { background: #eee; }
 
 #lobby button { background: #66CCFF; width:40%; margin-right:30%; margin: auto 30%; border-style: solid; border-width:2px; border-color: black; padding: 10px; height:100% }

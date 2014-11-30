@@ -5,6 +5,8 @@
 // TODO Show list of conversation peers  in side pannel
 // TODO implement scrolling in lobby (userlist) or make sure server always limits the number of users to what's visible
 
+var MAX_UPLOAD_SIZE = 1.5; // in MB
+
 var socket = io(); 
 
 var my_username;
@@ -191,6 +193,7 @@ $('#fileselect').change(function(e){
     // get file object from file selector input
     file = e.target.files[0];   
 
+
    // TODO check media type is valid
    // TODO also check size 
 });
@@ -202,18 +205,25 @@ $('#upload').submit(function(){
 
     if (file){
    
-        if (file.type.substring(0,5) === 'image'){
-            
-            // upload image  
-            imageReader.readAsDataURL(file);
+        if (file.type.substring(0,5) === 'image' || file.type.substring(0,5) === 'video'){
+        
+            if (file.size > MAX_UPLOAD_SIZE * 1000 * 1000)
+            {
+                alert('Sorry, we can only accept files up to ' + MAX_UPLOAD_SIZE + ' MB');
+            }
+            else if (file.type.substring(0,5) === 'image'){
+                
+                // upload image  
+                imageReader.readAsDataURL(file);
+            }
+            else if (file.type.substring(0,5) === 'video'){
+                
+                // uplaod video  
+                videoReader.readAsDataURL(file);
+            }
         }
-        else if (file.type.substring(0,5) === 'video'){
-            
-            // uplaod video  
-            videoReader.readAsDataURL(file);
-        }        
         else {
-            alert("Sorry, you an only share images");
+            alert("Sorry, you an only share images or videos");
         }
 
         // reset select box and file object 
