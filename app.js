@@ -77,7 +77,11 @@ io.sockets.on('connection', function(socket){
             msg['content'] = 'We are sorry but it appears you have been banned from our service';  
             socket.emit('message', msg); 
         }
-        // FIXME here, insert else-if statements to handle cases: 1. username already taked. 2. username is blank 
+        
+        else if ( online_users.indexOf(username) !== -1)
+        {
+            socket.emit('name taken');
+        }
         else
         {
             // sign in user
@@ -217,12 +221,20 @@ io.sockets.on('connection', function(socket){
         //console.log('message: ' + msg);
     });
     
+   
+    // VI   SHARE AN IMAGE OR A VIDEO
+    socket.on('file', function(dataURI,type){
+        
+        var to = user.peers;
+        
+        for(var i=0; i < to.length; i++){
+            dir[to[i]].socket.emit('file', dataURI,type, user.username);
+        }
+        console.log(user.username + ' has shared a file');
+    });
+
     
-    // VI   BAN USER
-    //
-    // TODO 
-    //
-    //
+    // VII   BAN USER
     socket.on('ban user', function(user){ // user = username 
         console.log('ADMIN: ban ' + user);
         
@@ -244,11 +256,10 @@ io.sockets.on('connection', function(socket){
     });
      
     
-    // VII  USER DISCONNECTS
+    // VIII   USER DISCONNECTS
     // user disconnects. Remove user from online users list and notify peers
     socket.on('disconnect', function(){
         
-        // TODO try-catch block shouldn't be necessary here anymore...
         try{
             console.log(user.username + ' disconnected');
             // TODO differentiate disconnection from leaving
@@ -294,18 +305,18 @@ function User(username,peers,ip,socket){
 }
 
 // 1
-// return up to 15 of the last users to sign in in an array 
+// return up to 10 of the last users to sign in in an array 
 function getMostRecentUsers(){
         var newest_users = [];
           
-        for (var i= online_users.length - 2; i >= 0 && i > online_users.length -17; i--){
+        for (var i= online_users.length - 2; i >= 0 && i > online_users.length -12; i--){
             newest_users.push(online_users[i]); 
         }
         return newest_users;
 }
 
 // 2  
-// return the first 15 online users found that match the prefix provided 
+// return the first 10 online users found that match the prefix provided 
 
 // FIXME make search case insensitive  
 
@@ -324,7 +335,7 @@ function findOnlineUsers(query,user){
         if (online_users[i].substring(0,string_length) === query && online_users[i] !== user){
             matching_users.push(online_users[i]);
         }
-        if (matching_users.length === 15) break;
+        if (matching_users.length === 10) break;
     }
     return matching_users; 
 }

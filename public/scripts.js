@@ -5,22 +5,47 @@
 // TODO Show list of conversation peers  in side pannel
 // TODO implement scrolling in lobby (userlist) or make sure server always limits the number of users to what's visible
 
-//  A   SIGN IN
 var socket = io(); 
 
-var my_username = '';
+var my_username;
 
-my_username = prompt("Please enter your name");
 
-//  check that username is valid: /\S/ checks that there is at least one none blank character in the name provided
-// TODO: limmit username length to something reasonable (that won't break the display)
-// TODO: limit character set to letters,numbers and spaces/underscore/dash/etc. But no '\'. 
-while (!(/\S/.test(my_username))) {
-    my_username = prompt("Your name cannot be left blank! Please enter your name again");
+//  A   SIGN IN
+// prompts and sets username, then sends it to server
+signIn(1);
+
+socket.on('name taken', function(){
+    signIn(2);
+});
+
+function signIn(attempt){
+    
+    if (attempt === 1){ 
+        my_username = prompt("Please enter your name");
+    }
+    else {
+        my_username = prompt(my_username + ' is not available. Please enter another name');
+    }
+    // TODO: limit username length to something reasonable (that won't break the display)
+    // TODO: limit character set to letters,numbers and spaces/underscore/dash/etc. But no '\'. 
+    
+    //  check that username is valid: /\S/ checks that there is at least one none blank character in the name provided
+    while (my_username === null || my_username === '' || !(/\S/.test(my_username)) ) {
+
+        if ( !(/\S/.test(my_username)) ) {
+
+            my_username = prompt("Your name cannot be left blank! Please enter your name again");
+        }
+        else
+        {
+            my_username = prompt("You cannot access server without entering a name first!");
+        }
+    }
+    socket.emit('sign in', my_username); 
 }
 
-// send username to server
-socket.emit('sign in',my_username); 
+
+
 
 
 //  B   UPDATE LOBBY (automatic upon signing in)
@@ -45,6 +70,9 @@ $("#search").on("input", function() {
     socket.emit('search',$('#search').val()); // emit search event and pass query/content of search box
 });
 
+$('#searchfriend').submit(function(){
+    return false;
+});
 
 //  D   SEND A CHAT INVITE
 //       Drag and drop someone's name in order to send him/her an invite  
@@ -117,7 +145,7 @@ socket.on('rsvp', function(rsvp){
 // TODO UI: add auto scrolling to bring into view the most recent message 
 // TODO browser notifcation when receiving message and user is not viewing page
 
-$('form').submit(function(){
+$('#sendmessage').submit(function(){
     
     // send message to server
     socket.emit('message', $('#m').val());
@@ -125,8 +153,10 @@ $('form').submit(function(){
     // append user's own message directly to his/her chat window
     $('#messages').append($('<li style="color:gray; font-weight: 100;">').text('You:\t' + $('#m').val()));
     
+    scrollDown();
+    
     $('#m').val(''); // reset message input box
-    return false;
+    return false;    // sothat the page doesn't reload
 });
 
 
@@ -147,5 +177,101 @@ socket.on('message', function(msg){
     {
         $('#messages').append($('<li>').text(msg['from'] + ':\t' + msg['content']));
     }
+    scrollDown();
 });
 
+// I    SHARE FILE
+// source: http://www.sitepoint.com/html5-file-drag-and-drop/
+var imageReader = new FileReader();
+var videoReader = new FileReader();
+var file;
+
+$('#fileselect').change(function(e){
+    
+    // get file object from file selector input
+    file = e.target.files[0];   
+
+   // TODO check media type is valid
+   // TODO also check size 
+});
+
+
+// source: http://www.htmlxprs.com/post/6/creating-a-realtime-image-sharing-app-with-ionic-and-socketio-tutorial
+
+$('#upload').submit(function(){
+
+    if (file){
+   
+        if (file.type.substring(0,5) === 'image'){
+            
+            // upload image  
+            imageReader.readAsDataURL(file);
+        }
+        else if (file.type.substring(0,5) === 'video'){
+            
+            // uplaod video  
+            videoReader.readAsDataURL(file);
+        }        
+        else {
+            alert("Sorry, you an only share images");
+        }
+
+        // reset select box and file object 
+        $('#fileselect').val('');
+        file = '';
+    }
+    else
+    {
+        alert("You haven't selected any file to share");
+    }
+    
+    return false; // don't reload the page
+});
+
+
+imageReader.onload=function(e){
+    
+    // append image to own interface
+    appendFile(e.target.result,'image','self');
+    scrollDown();
+    
+    // share image
+    socket.emit('file',e.target.result,'image');
+};
+
+videoReader.onload=function(e){
+    
+    // append video to own interface
+    appendFile(e.target.result,'video','self');
+    scrollDown();
+    
+    // share video
+    socket.emit('file',e.target.result,'video');
+};
+
+socket.on('file', function(dataURI,type,from){
+    
+    appendFile(dataURI,type,from);
+    scrollDown();
+
+});
+function appendFile(URI,type,user){
+    
+    if (user === 'self'){
+        $('#messages').append($('<li style="color:gray; font-weight: 100;">').text('You:'));
+    }
+    else {
+        $('#messages').append($('<li>').text(user + ':'));
+    }
+
+    if (type === 'image'){
+        $('#messages').append('<li><img src="' + URI + '" height="150px" /><li>');
+    }
+    else {
+        $('#messages').append('<li><video width="320" height="240" controls><source src="' + URI + '"><li>');
+    }
+}
+
+function scrollDown(){
+    $('#chat').animate({scrollTop: $('#chat').prop("scrollHeight")}, 500); 
+}

@@ -3,14 +3,14 @@
 <head>
     <title>streamChat!</title>
     <link href="/style.css" rel="stylesheet" type="text/css">
-</head>
+</head >
 <body>
     <div id="room">
         <div id="chat"> 
             <ul id="messages"></ul>
         </div>
         <div id="chatform"> 
-            <form action="">
+            <form id="sendmessage" action="">
                 <input id="m" autocomplete="off" /><button>Send</button>
             </form>
         </div>
@@ -20,7 +20,7 @@
             <h3> Who's Online? </h3>
             <p id="tally"></p>
         </div>
-            <form action="">
+            <form id="searchfriend" action="">
                 <input id="search" type="text" placeholder="type in friend's username" />
             </form>
             <ul id="users"></ul>
@@ -33,8 +33,12 @@
             </div>
         </div>
         <div id = "lobbyfooter">
-            <p> Drag and drop a user onto one of the above two boxes to add them to chat </p>
+            <p> Drag and drop a user onto one of the above two boxes</p>
         </div>
+        <h3> Share Image/Video </h3> 
+        <form id="upload" action="">
+            <input id="fileselect" type="file" name="fileselect" /><button>Share!</button>
+        </form>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jquery-2.1.1.min.js"></script>
