@@ -53,30 +53,25 @@ app.get('/admin', function(req, res){
 });
 
 //  SOCKET.IO SERVER 
-io.on('connection', function(socket){
+io.sockets.on('connection', function(socket){
     
     var user; // user Objet for this connection
+    
+    // TODO insert recover code here
 
     //  I   SIGN IN
     socket.on('sign in', function(username){
         
         var peers = [];  
-        var ip = socket.handshake.address; // IP address can be useful to block or geolocalise user 
-        console.log('IP 1: '+ username +' has IP '+ ip);  
-       
-        var ip2 = req.headers['x-forwarded-for']; 
-        var ip3   =  req.connection.remoteAddress;
-        var ip4   =  req.socket.remoteAddress;
-        var ip5   =  req.connection.socket.remoteAddress;
-        console.log('IP 2: '+ ip2 ); 
-        console.log('IP 3: '+ ip3 ); 
-        console.log('IP 4: '+ ip4 ); 
-        console.log('IP 5: '+ ip5 ); 
+        var ip = socket.request.connection.remoteAddress;
+        var port = socket.request.connection.remotePort;
+        
+        console.log('New user connected: '+ username +' from: '+ ip + ':' + port );
 
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
             
-            console.log(username + " blacklisted!);  
+            console.log(username + ' is blacklisted and was denied access to the server!');  
             var msg = {};
             msg['from'] = 'SERVER';
             msg['content'] = 'We are sorry but it appears you have been banned from our service';  
