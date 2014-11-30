@@ -47,13 +47,12 @@ app.use(express.static(__dirname + '/public', {index: false}));
 app.get('/', function(req, res){       
 
 var ip2 = req.headers['x-forwarded-for'];
-console.log(ip2);
+console.log('IP2: '+ ip2);
+
 var ip3 = req.connection.remoteAddress;
-console.log(ip3);
-var ip4 = req.socket.remoteAddress;
-console.log(ip4);
-var ip5 = req.connection.socket.remoteAddress;
-console.log(i5);
+console.log('IP3: '+ ip3); 
+//var ip4 = req.socket.remoteAddress;
+//var ip5 = req.connection.socket.remoteAddress;
 
     res.status(200).sendFile(__dirname + '/index.html'); // chat UI 
 });
@@ -75,7 +74,12 @@ io.sockets.on('connection', function(socket){
         var peers = [];  
         var ip = socket.request.connection.remoteAddress;
         var port = socket.request.connection.remotePort;
+  
+        console.log('IP: '+ ip); 
         
+        var ip5 = socket.remoteAddress;
+        console.log('IP5: '+ ip5); 
+
         console.log('New user connected: '+ username +' from: '+ ip + ':' + port );
 
         // first check that IP is cleared
