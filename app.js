@@ -32,6 +32,8 @@ var ip_blacklist = [];  // list of blacklisted IPs used to enforce ban
 var MAX_PEERS = 4;      // limits group chat size 
 
 
+var user_ips = [];  /// TODO don't leave like that!!
+
 // HTTP SERVER
 // setup server to listen for requests at the environement's IP, and the specified port (defaults to 3000)
 
@@ -44,6 +46,7 @@ http.listen(port, function () {
 
 app.use(express.static(__dirname + '/public', {index: false}));
 
+
 app.get('/', function(req, res){       
 
 var ip2 = req.headers['x-forwarded-for'];
@@ -51,8 +54,8 @@ console.log('IP2: '+ ip2);
 
 var ip3 = req.connection.remoteAddress;
 console.log('IP3: '+ ip3); 
-//var ip4 = req.socket.remoteAddress;
-//var ip5 = req.connection.socket.remoteAddress;
+
+user_ips.push(ip2);   // note signing in not in same order as http requests (not necessarily)
 
     res.status(200).sendFile(__dirname + '/index.html'); // chat UI 
 });
@@ -72,15 +75,10 @@ io.sockets.on('connection', function(socket){
     socket.on('sign in', function(username){
         
         var peers = [];  
-        var ip = socket.request.connection.remoteAddress;
-        var port = socket.request.connection.remotePort;
+        var ip = user_ips.pop();  // socket.request.connection.remoteAddress;
+        //var port = socket.request.connection.remotePort;
   
-        console.log('IP: '+ ip); 
-        
-        var ip5 = socket.remoteAddress;
-        console.log('IP5: '+ ip5); 
-
-        console.log('New user connected: '+ username +' from: '+ ip + ':' + port );
+        console.log('New user connected: '+ username +' from: '+ ip);
 
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
