@@ -32,31 +32,21 @@ var ip_blacklist = [];  // list of blacklisted IPs used to enforce ban
 var MAX_PEERS = 4;      // limits group chat size 
 
 
-var user_ips = [];  /// FIXME don't leave like that!!
-
 // HTTP SERVER
 // setup server to listen for requests at the environement's IP, and the specified port (defaults to 3000)
 
 var port = process.env.PORT || 3000;
 
 http.listen(port, function () {
+    
     var addr = http.address();
     console.log('listening on http://' + addr.address + ':' + addr.port);
 });
 
 app.use(express.static(__dirname + '/public', {index: false}));
 
-
+// URL routing
 app.get('/', function(req, res){       
-
-    var ip2 = req.headers['x-forwarded-for'];
-    user_ips.push(ip2);   // note signing in not in same order as http requests (not necessarily)
-
-    console.log('New request from ' + ip2); 
-
-    // FIXME use Jade to pass in ip2 in the form
-    // or do sign up via a sign up page so that we already have a name to link to the IP
-    // when opening the socket connection with index.html
     res.status(200).sendFile(__dirname + '/index.html'); // chat UI 
 });
 
@@ -68,30 +58,25 @@ app.get('/admin', function(req, res){
 io.sockets.on('connection', function(socket){
     
     var user; // user Objet for this connection
+    
     // TODO insert recover code here
 
     //  I   SIGN IN
     socket.on('sign in', function(username){
         
         var peers = [];  
-        var ip = user_ips.shift();  // socket.request.connection.remoteAddress;
         
-        var ip_online = socket.request.headers['x-forwarded-for'];
-        var ip_local = socket.request.connection.remoteAddress; 
-        //var port = socket.request.connection.remotePort;
+        // get IP when running ONLINE or LOCALLY
+        var ip = socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress; ;
+        //var port = socket.request.connection.remotePort; //  only works locally
   
         console.log('New user connected: '+ username +' from: '+ ip);
-        console.log('IP_Online : ' + ip_online);
-        console.log('IP_Local  : ' + ip_local);
 
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
             
             console.log(username + ' is blacklisted and was denied access to the server!');  
-            var msg = {};
-            msg['from'] = 'SERVER';
-            msg['content'] = 'We are sorry but it appears you have been banned from our service';  
-            socket.emit('message', msg); 
+            socket.emit('message',{'from':'SERVER','content':'We are sorry but it appears you have been banned from our service'}); 
         }
         
         else if ( online_users.indexOf(username) !== -1)
@@ -115,7 +100,8 @@ io.sockets.on('connection', function(socket){
             var total_users = online_users.length;
             socket.emit('update lobby', newest_users,total_users);
 
-
+            // notify everyone else
+            socket.broadcast.emit('message',{'from':'SERVER','content':''+ username +' just signed in'});
         } 
     });
     
@@ -239,6 +225,10 @@ io.sockets.on('connection', function(socket){
         //console.log('message: ' + msg);
     });
     
+    // P2P DEBUG 
+    socket.on('peer connection', function(){
+        console.log('DARN, SERVER INTERCEPTED PEER TO PEER CONNECTION');
+    });
    
     // VI   SHARE AN IMAGE OR A VIDEO
     socket.on('file', function(dataURI,type){
@@ -246,9 +236,14 @@ io.sockets.on('connection', function(socket){
         //TODO attempt to establish peer to peer connections
         // send back to user peer's IP address
         // hardcoded test
+        var to = user.peers;
         
-        peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
-        socket.emit('p2p',peer_ip);
+        for(var i=0; i < to.length; i++){
+            socket.emit('initiate p2p', dir[to[i]].ip);
+        }
+        
+        //peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
+        //socket.emit('p2p',peer_ip);
 
         //var to = user.peers;
        // 

@@ -16,18 +16,24 @@ var my_username;
 var p2p_socket; // socket connected to a peer
 
 // P2P Initiator
-socket.on('p2p',function(ip){
+socket.on('initiate p2p',function(peer_ip){
     
-    p2p_socket = io.connect(ip); // connection to a peer
+    console.log('Attempting a P2P connection to: ' + peer_ip);
+
+    p2p_socket = io.connect(peer_ip); // connection to a peer
 
     p2p_socket.on('connect', function(){
-        alert(my_username + ' successfully started a p2p connection with ' + ip );
+        console.log(my_username + ' successfully started a p2p connection with ' + peer_ip );
+        alert(my_username + ' successfully started a p2p connection with ' + peer_ip );
+        
+        p2p_socket.emit('peer connection');
     });
-    p2p_socket.emit('peer_connection');
 });
+
 // P2P Receiver
-socket.on('peer_connection', function(){
+socket.on('peer connection', function(){
     
+    console.log('Received a connection request');
     alert('Received a connection request');
 
 });
@@ -193,6 +199,12 @@ socket.on('message', function(msg){
         $('#messages').append($('<li>').text(msg['from'] + ':\t' + msg['content']));
     }
     scrollDown();
+});
+
+socket.on('disconnect',function(){
+    
+    notification = 'SERVER:\t You have been disconnected'.italics();
+    $('#messages').append('<li>' + notification + '</li>');
 });
 
 
