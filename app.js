@@ -68,7 +68,6 @@ app.get('/admin', function(req, res){
 io.sockets.on('connection', function(socket){
     
     var user; // user Objet for this connection
-    
     // TODO insert recover code here
 
     //  I   SIGN IN
@@ -79,6 +78,9 @@ io.sockets.on('connection', function(socket){
         //var port = socket.request.connection.remotePort;
   
         console.log('New user connected: '+ username +' from: '+ ip);
+
+        var clientIP = socket.handshake.headers['x-real-ip']; 
+        console.log('clientIP: '+ clientIP);
 
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
@@ -110,6 +112,8 @@ io.sockets.on('connection', function(socket){
             var newest_users = getMostRecentUsers();
             var total_users = online_users.length;
             socket.emit('update lobby', newest_users,total_users);
+
+
         } 
     });
     
@@ -237,12 +241,19 @@ io.sockets.on('connection', function(socket){
     // VI   SHARE AN IMAGE OR A VIDEO
     socket.on('file', function(dataURI,type){
         
-        var to = user.peers;
+        //TODO attempt to establish peer to peer connections
+        // send back to user peer's IP address
+        // hardcoded test
         
-        for(var i=0; i < to.length; i++){
-            dir[to[i]].socket.emit('file', dataURI,type, user.username);
-        }
-        console.log(user.username + ' has shared a file');
+        peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
+        socket.emit('p2p',peer_IP);
+
+        //var to = user.peers;
+        //
+        //for(var i=0; i < to.length; i++){
+        //    dir[to[i]].socket.emit('file', dataURI,type, user.username);
+        //}
+        console.log(user.username + ' is sharing a file');
     });
 
     

@@ -11,6 +11,21 @@ var socket = io();
 
 var my_username;
 
+var p2p_socket; // socket connected to a peer
+// P2P test
+
+// P2P Initiator
+socket.on('p2p',function(ip){
+    
+    p2p_socket = io.connect(ip); // connection to a peer
+    p2p_socket.emit('peer_connection');
+});
+// P2P Receiver
+socket.on('peer_connection',function(){
+    
+    alert('This Bob received a connection request');
+
+});
 
 //  A   SIGN IN
 // prompts and sets username, then sends it to server
@@ -45,10 +60,6 @@ function signIn(attempt){
     }
     socket.emit('sign in', my_username); 
 }
-
-
-
-
 
 //  B   UPDATE LOBBY (automatic upon signing in)
 //      lobby = list of online users
@@ -144,9 +155,6 @@ socket.on('rsvp', function(rsvp){
 
 
 //  G   SEND MESSAGE 
-// TODO UI: add auto scrolling to bring into view the most recent message 
-// TODO browser notifcation when receiving message and user is not viewing page
-
 $('#sendmessage').submit(function(){
     
     // send message to server
@@ -182,6 +190,7 @@ socket.on('message', function(msg){
     scrollDown();
 });
 
+
 // I    SHARE FILE
 // source: http://www.sitepoint.com/html5-file-drag-and-drop/
 var imageReader = new FileReader();
@@ -193,9 +202,6 @@ $('#fileselect').change(function(e){
     // get file object from file selector input
     file = e.target.files[0];   
 
-
-   // TODO check media type is valid
-   // TODO also check size 
 });
 
 
@@ -265,6 +271,8 @@ socket.on('file', function(dataURI,type,from){
     scrollDown();
 
 });
+
+
 function appendFile(URI,type,user){
     
     if (user === 'self'){
