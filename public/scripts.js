@@ -11,16 +11,17 @@ var socket = io();
 
 var my_username;
 
+
 // P2P CODE (in dev)
 
-var p2p_socket; // socket connected to a peer
+//var p2p_socket; // socket connected to a peer
 
 // P2P Initiator
 socket.on('initiate p2p',function(peer_ip){
     
     console.log('Attempting a P2P connection to: ' + peer_ip);
 
-    p2p_socket = io.connect(peer_ip); // connection to a peer
+    var p2p_socket = io.connect(peer_ip); // connection to a peer. Need port?
     
     console.log('Connection successful? Testing...');
 
@@ -36,38 +37,33 @@ socket.on('initiate p2p',function(peer_ip){
 });
 
 
-socket.on('receive p2p',function(){
-
-    console.log('Expecting a P2P connection...');
-
-    p2p_socket = io(); // listen for a connection
-
-    p2p_socket.on('connect', function(){
-        console.log(my_username + ' successfully accepted P2P connection');
-        alert(my_username + ' successfully accepted P2P connection');
-            
-        p2p_socket.emit('peer connection');
-    });
-
-    p2p_socket.on('test',function(){
-        alert('Test Worked! P2P socket caught event');    
-    });
-    socket.on('test',function(){
-        alert('Test Worked! Main socket caught event');    
-    });
-});
+//socket.on('receive p2p',function(){
+//
+//    console.log('Expecting a P2P connection...');
+//
+//    var p2p_socket = io(); // listen for a connection
+//    
+//    console.log('Got P2P connection?');
+//    alert('Got P2P connection?');
+//
+//    p2p_socket.on('connect', function(){
+//        console.log(my_username + ' successfully accepted P2P connection');
+//        alert(my_username + ' successfully accepted P2P connection');
+//    });
+//
+//    p2p_socket.on('test',function(){
+//        alert('Test Worked! P2P socket caught event');    
+//    });
+//    socket.on('test',function(){
+//        alert('Test Worked! Main socket caught event');    
+//    });
+//});
 
 socket.on('test',function(){
+    console.log('Test Worked! Main socket caught event outside of P2P setup');    
     alert('Test Worked! Main socket caught event outside of P2P setup');    
 });
 
-// P2P Receiver
-socket.on('peer connection', function(){
-    
-    console.log('Received a connection request');
-    alert('Received a connection request');
-
-});
 
 //  A   SIGN IN
 // prompts and sets username, then sends it to server
