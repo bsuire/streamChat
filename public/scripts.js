@@ -21,12 +21,17 @@ socket.on('initiate p2p',function(peer_ip){
     console.log('Attempting a P2P connection to: ' + peer_ip);
 
     p2p_socket = io.connect(peer_ip); // connection to a peer
+    
+    console.log('Connection successful? Testing...');
 
+    p2p_socket.emit('test');
+    
+    console.log('Test event sent');
+    
     p2p_socket.on('connect', function(){
         console.log(my_username + ' successfully started a p2p connection with ' + peer_ip );
         alert(my_username + ' successfully started a p2p connection with ' + peer_ip );
         
-        p2p_socket.emit('peer connection');
     });
 });
 
@@ -43,8 +48,18 @@ socket.on('receive p2p',function(){
             
         p2p_socket.emit('peer connection');
     });
+
+    p2p_socket.on('test',function(){
+        alert('Test Worked! P2P socket caught event');    
+    });
+    socket.on('test',function(){
+        alert('Test Worked! Main socket caught event');    
+    });
 });
 
+socket.on('test',function(){
+    alert('Test Worked! Main socket caught event outside of P2P setup');    
+});
 
 // P2P Receiver
 socket.on('peer connection', function(){

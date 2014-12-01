@@ -226,8 +226,8 @@ io.sockets.on('connection', function(socket){
     });
     
     // P2P DEBUG 
-    socket.on('peer connection', function(){
-        console.log('DARN, SERVER INTERCEPTED PEER TO PEER CONNECTION');
+    socket.on('test', function(){
+        console.log('DARN, SERVER INTERCEPTED PEER TO PEER TEST');
     });
    
     // VI   SHARE AN IMAGE OR A VIDEO
