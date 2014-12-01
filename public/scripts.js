@@ -19,10 +19,14 @@ var p2p_socket; // socket connected to a peer
 socket.on('p2p',function(ip){
     
     p2p_socket = io.connect(ip); // connection to a peer
+
+    p2p_socket.on('connect', function(){
+        alert(my_username + ' successfully started a p2p connection with ' + ip );
+    });
     p2p_socket.emit('peer_connection');
 });
 // P2P Receiver
-socket.on('peer_connection',function(){
+socket.on('peer_connection', function(){
     
     alert('Received a connection request');
 
