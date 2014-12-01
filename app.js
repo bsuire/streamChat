@@ -242,14 +242,14 @@ io.sockets.on('connection', function(socket){
         // send back to user peer's IP address
         // hardcoded test
         
-        peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
-        socket.emit('p2p',peer_ip);
+        //peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
+        //socket.emit('p2p',peer_ip);
 
-        //var to = user.peers;
-        //
-        //for(var i=0; i < to.length; i++){
-        //    dir[to[i]].socket.emit('file', dataURI,type, user.username);
-        //}
+        var to = user.peers;
+        
+        for(var i=0; i < to.length; i++){
+            dir[to[i]].socket.emit('file', dataURI,type, user.username);
+        }
         console.log(user.username + ' is sharing a file');
     });
 

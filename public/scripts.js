@@ -11,8 +11,9 @@ var socket = io();
 
 var my_username;
 
+// P2P CODE (in dev)
+
 var p2p_socket; // socket connected to a peer
-// P2P test
 
 // P2P Initiator
 socket.on('p2p',function(ip){
@@ -23,7 +24,7 @@ socket.on('p2p',function(ip){
 // P2P Receiver
 socket.on('peer_connection',function(){
     
-    alert('This Bob received a connection request');
+    alert('Received a connection request');
 
 });
 
