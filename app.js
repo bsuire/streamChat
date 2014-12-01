@@ -79,9 +79,6 @@ io.sockets.on('connection', function(socket){
   
         console.log('New user connected: '+ username +' from: '+ ip);
 
-        var clientIP = socket.handshake.headers['x-real-ip']; 
-        console.log('clientIP: '+ clientIP);
-
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
             
@@ -246,7 +243,7 @@ io.sockets.on('connection', function(socket){
         // hardcoded test
         
         peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
-        socket.emit('p2p',peer_IP);
+        socket.emit('p2p',peer_ip);
 
         //var to = user.peers;
         //
