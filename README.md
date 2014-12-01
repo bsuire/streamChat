@@ -103,3 +103,41 @@ listening on http://0.0.0.0:3000
 To start using the chat app, open your browser at http://localhost:3000/
 
 Happy chatting!
+
+### Implementation 
+
+##### Method
+
+I decided to implement features following the logical order of a user's interaction: a. sign in, b. search other users, c. invite a user to chat, d. send private messages, e. make a group conversation, f. share files, g. enhance file sharing with a P2P alternative (which I wasn't able to figure out).
+
+For every feature as well, I started with the UI/client, before implementing the feature backend-side.
+
+This method allowed me to test each new feature without having to write any scaffolding code.
+
+
+##### Implementation Log
+
+1. Nov 22: I got started using the chat example featured on socket-io's website. I'd seen this example somewhere else, and since it said it supported binary content (streams) I figured it would do the job perfectly.
+
+2. Nov 23: After the jump start thanks to the tutorial, I had to dig deeper and understand how the chat server, and especially sockets really work. Different methods are used for different versions, and that was confusing for a Node.js and Socket.io newbie. A: silly example: how to source static content. (Socket.io's is just socket.io/socket.io-client.js, which not being at all the actual path really puzzled me as a Node.js beginner.) On the socket.io side, how do you send a private message from one user to another?
+
+3. Nov 24: Implemented sign in + first schema for tracking users in the server.
+
+4. Nov 25: Client: added search panel and inviting users using drag and drop. Backend: implemented 'search' feature
+
+5. Nov 26: Updated the data structures used in order to support group chat more easily. Fully implemented private chat. Implemented group chat.
+
+6. Nov 27: Added group chat limit, including notifications when a group size limit (this was tricky because a user could send 10 invitations in a row, so we need to check both when before sending and after the invite has been accepted by the peer). Also added fixes to the the chat invite invite process in general: for instance, a user may attempt to send an invitation to another user who's gone offline, or, inversely, a user may accept an invitation after the other user went offline. I also fixed the search/update lobby feature, so that a user's own name won't show in the pannel. Finally, I also fixed the UI, so that the chat window would allow scrolling, use a different color for user's own messages.
+
+7. Nov 28: Code refactoring. Implemented ban feature (including /admin page). App deployment.
+
+8. Nov 29: Implemented file sharing. Fixed ban feature (I had a lot of trouble finding the correct method to get a user's IP. To make things work, one method would work locally but not online, while another worked online but not locally. However combining both it now works perfectly).  
+
+9. Nov 30: Added a file size limit based on tests. Tried to establish a P2P connection.
+
+
+##### To Do
+
+1. P2P file sharing: when a user attempts to share a file, he/she should first try to setup a P2P connection with each peer. This process is mediated by the server, who sends back the peer's IP addresses. However, this connection could fail because of the peer's firewall, in which case the server should be notified. The server then tells the peer to initiate a P2P connection to the user. If both attempts at establishing a P2P connection fail, the file sharing process should fall back to going through the server.
+
+2. File sharing: I am currently sending a dataURI in "one piece" (as far as the application layer is concerned). It would be a good idea to try using a stream, which would be more memory efficient and faster because each (stream) segment could be forwarded on to the peer immediately, instead of the current implementation that waits for the full data URI. This would also probably allow to send larger files (currently breaks down ~ 5MB).
