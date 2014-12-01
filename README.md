@@ -10,8 +10,6 @@ I used the following demo http://socket.io/get-started/chat/ as a boilerplate.
 Moreover, I also relied on Craig Buckler's tutorial http://www.sitepoint.com/html5-file-drag-and-drop/ in order to help me with file uploads.
 
 
-**CURRENTLY IN DEVELOPMENT**
-
 ### Features
  - [x] private, one on one chat
  - [x] group chat (up to 5 peope)
@@ -141,3 +139,5 @@ This method allowed me to test each new feature without having to write any scaf
 1. P2P file sharing: when a user attempts to share a file, he/she should first try to setup a P2P connection with each peer. This process is mediated by the server, who sends back the peer's IP addresses. However, this connection could fail because of the peer's firewall, in which case the server should be notified. The server then tells the peer to initiate a P2P connection to the user. If both attempts at establishing a P2P connection fail, the file sharing process should fall back to going through the server.
 
 2. File sharing: I am currently sending a dataURI in "one piece" (as far as the application layer is concerned). It would be a good idea to try using a stream, which would be more memory efficient and faster because each (stream) segment could be forwarded on to the peer immediately, instead of the current implementation that waits for the full data URI. This would also probably allow to send larger files (currently breaks down ~ 5MB).
+
+3. Restructurating: I am new to Node.js so I didn't (know how to) do this, but I should restructure the app, using different layers of abstractions, so that each function call and each function only has a few lines of codes and it's easy to have a clear understanding of what it does and we can get an immediate overview of what the app does in app.js (which for instance woud be reduced to < 100 lines).
