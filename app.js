@@ -32,7 +32,7 @@ var ip_blacklist = [];  // list of blacklisted IPs used to enforce ban
 var MAX_PEERS = 4;      // limits group chat size 
 
 
-var user_ips = [];  /// TODO don't leave like that!!
+var user_ips = [];  /// FIXME don't leave like that!!
 
 // HTTP SERVER
 // setup server to listen for requests at the environement's IP, and the specified port (defaults to 3000)
@@ -49,14 +49,14 @@ app.use(express.static(__dirname + '/public', {index: false}));
 
 app.get('/', function(req, res){       
 
-var ip2 = req.headers['x-forwarded-for'];
-console.log('IP2: '+ ip2);
+    var ip2 = req.headers['x-forwarded-for'];
+    user_ips.push(ip2);   // note signing in not in same order as http requests (not necessarily)
 
-var ip3 = req.connection.remoteAddress;
-console.log('IP3: '+ ip3); 
+    console.log('New request from ' + ip2); 
 
-user_ips.push(ip2);   // note signing in not in same order as http requests (not necessarily)
-
+    // FIXME use Jade to pass in ip2 in the form
+    // or do sign up via a sign up page so that we already have a name to link to the IP
+    // when opening the socket connection with index.html
     res.status(200).sendFile(__dirname + '/index.html'); // chat UI 
 });
 
@@ -74,10 +74,15 @@ io.sockets.on('connection', function(socket){
     socket.on('sign in', function(username){
         
         var peers = [];  
-        var ip = user_ips.pop();  // socket.request.connection.remoteAddress;
+        var ip = user_ips.shift();  // socket.request.connection.remoteAddress;
+        
+        var ip_online = socket.request.headers['x-forwarded-for'];
+        var ip_local = socket.request.connection.remoteAddress; 
         //var port = socket.request.connection.remotePort;
   
         console.log('New user connected: '+ username +' from: '+ ip);
+        console.log('IP_Online : ' + ip_online);
+        console.log('IP_Local  : ' + ip_local);
 
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
@@ -242,15 +247,15 @@ io.sockets.on('connection', function(socket){
         // send back to user peer's IP address
         // hardcoded test
         
-        //peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
-        //socket.emit('p2p',peer_ip);
+        peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
+        socket.emit('p2p',peer_ip);
 
-        var to = user.peers;
-        
-        for(var i=0; i < to.length; i++){
-            dir[to[i]].socket.emit('file', dataURI,type, user.username);
-        }
-        console.log(user.username + ' is sharing a file');
+        //var to = user.peers;
+       // 
+       // for(var i=0; i < to.length; i++){
+       //     dir[to[i]].socket.emit('file', dataURI,type, user.username);
+       // }
+       // console.log(user.username + ' is sharing a file');
     });
 
     
