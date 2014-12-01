@@ -12,59 +12,6 @@ var socket = io();
 var my_username;
 
 
-// P2P CODE (in dev)
-
-//var p2p_socket; // socket connected to a peer
-
-// P2P Initiator
-socket.on('initiate p2p',function(peer_ip){
-    
-    console.log('Attempting a P2P connection to: ' + peer_ip);
-
-    var p2p_socket = io.connect(peer_ip); // connection to a peer. Need port?
-    
-    console.log('Connection successful? Testing...');
-
-    p2p_socket.emit('test');
-    
-    console.log('Test event sent');
-    
-    p2p_socket.on('connect', function(){
-        console.log(my_username + ' successfully started a p2p connection with ' + peer_ip );
-        alert(my_username + ' successfully started a p2p connection with ' + peer_ip );
-        
-    });
-});
-
-
-//socket.on('receive p2p',function(){
-//
-//    console.log('Expecting a P2P connection...');
-//
-//    var p2p_socket = io(); // listen for a connection
-//    
-//    console.log('Got P2P connection?');
-//    alert('Got P2P connection?');
-//
-//    p2p_socket.on('connect', function(){
-//        console.log(my_username + ' successfully accepted P2P connection');
-//        alert(my_username + ' successfully accepted P2P connection');
-//    });
-//
-//    p2p_socket.on('test',function(){
-//        alert('Test Worked! P2P socket caught event');    
-//    });
-//    socket.on('test',function(){
-//        alert('Test Worked! Main socket caught event');    
-//    });
-//});
-
-socket.on('test',function(){
-    console.log('Test Worked! Main socket caught event outside of P2P setup');    
-    alert('Test Worked! Main socket caught event outside of P2P setup');    
-});
-
-
 //  A   SIGN IN
 // prompts and sets username, then sends it to server
 signIn(1);
@@ -99,6 +46,7 @@ function signIn(attempt){
     socket.emit('sign in', my_username); 
 }
 
+
 //  B   UPDATE LOBBY (automatic upon signing in)
 //      lobby = list of online users
 socket.on('update lobby', function(users_list,total_users){
@@ -124,6 +72,7 @@ $("#search").on("input", function() {
 $('#searchfriend').submit(function(){
     return false;
 });
+
 
 //  D   SEND A CHAT INVITE
 //       Drag and drop someone's name in order to send him/her an invite  
@@ -228,12 +177,6 @@ socket.on('message', function(msg){
     scrollDown();
 });
 
-socket.on('disconnect',function(){
-    
-    notification = 'SERVER:\t You have been disconnected'.italics();
-    $('#messages').append('<li>' + notification + '</li>');
-});
-
 
 // I    SHARE FILE
 // source: http://www.sitepoint.com/html5-file-drag-and-drop/
@@ -249,7 +192,6 @@ $('#fileselect').change(function(e){
 });
 
 
-// source: http://www.htmlxprs.com/post/6/creating-a-realtime-image-sharing-app-with-ionic-and-socketio-tutorial
 
 $('#upload').submit(function(){
 
@@ -296,6 +238,7 @@ imageReader.onload=function(e){
     scrollDown();
     
     // share image
+    // TODO try stream?
     socket.emit('file',e.target.result,'image');
 };
 
@@ -317,6 +260,48 @@ socket.on('file', function(dataURI,type,from){
 });
 
 
+// TODO P2P connection setup
+
+// I've fiddled around with setting up a p2p connection
+// I tried isntantiating 1 new socket on each side
+// Here, I'm trying to add another connection to the same sockets 
+// (docs say they support multiplexing, however that not mean different origins)
+// At best I get a "connection refused error" because of same origin policy (Firefox)
+
+// P2P Initiator
+socket.on('initiate p2p',function(ip,port){
+    
+    // if defined, append port # to the ip address  
+    if (port !== '') peer_ip = ip + ':' + port;
+
+    console.log('Attempting a P2P connection to: ' + peer_ip);
+
+    socket = io.connect(peer_ip,{'force new connection':true} );// try pssing this option { 'force new connection':true }
+    
+    p2p_socket.on('connect', function(){
+        alert(my_username + ' successfully started a p2p connection with ' + peer_ip );
+        
+    });
+});
+socket.on('receive p2p',function(){
+    
+    console.log('Awaiting a P2P connection...');
+
+    socket.on('connect', function(){
+        alert("Client is connected to peer");
+    }); 
+    
+});
+///////
+
+// User Diconnected Error 
+socket.on('disconnect',function(){
+    
+    notification = 'SERVER:\t You have been disconnected'.italics();
+    $('#messages').append('<li>' + notification + '</li>');
+});
+
+// Appends either an image or a video file to user's chat window
 function appendFile(URI,type,user){
     
     if (user === 'self'){
@@ -333,7 +318,7 @@ function appendFile(URI,type,user){
         $('#messages').append('<li><video width="320" height="240" controls><source src="' + URI + '"><li>');
     }
 }
-
+// Autoamtic scroll down message on any kind of chat message (text or file)
 function scrollDown(){
     $('#chat').animate({scrollTop: $('#chat').prop("scrollHeight")}, 500); 
 }

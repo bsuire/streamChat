@@ -67,10 +67,17 @@ io.sockets.on('connection', function(socket){
         var peers = [];  
         
         // get IP when running ONLINE or LOCALLY
-        var ip = socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress; ;
-        //var port = socket.request.connection.remotePort; //  only works locally
-  
+        var ip = socket.request.headers['x-forwarded-for'] || socket.request.connection.remoteAddress;
+        var user_port = socket.request.connection.remotePort; //  only works locally
+
         console.log('New user connected: '+ username +' from: '+ ip);
+
+        if (user_port){
+            console.log('Port: '+ user_port); 
+        }
+        else {
+            user_port = '';
+        }
 
         // first check that IP is cleared
         if (ip_blacklist.indexOf(ip) !== -1 ){
@@ -86,7 +93,7 @@ io.sockets.on('connection', function(socket){
         else
         {
             // sign in user
-            user = new User(username,peers,ip,socket);
+            user = new User(username,peers,ip,user_port,socket);
             
             dir[username] = user;         // add user to directory
             online_users.push(username);  // add user to list of online users
@@ -225,33 +232,16 @@ io.sockets.on('connection', function(socket){
         //console.log('message: ' + msg);
     });
     
-    // P2P DEBUG 
-    socket.on('test', function(){
-        console.log('DARN, SERVER INTERCEPTED PEER TO PEER TEST');
-    });
    
     // VI   SHARE AN IMAGE OR A VIDEO
     socket.on('file', function(dataURI,type){
         
-        //TODO attempt to establish peer to peer connections
-        // send back to user peer's IP address
-        // hardcoded test
         var to = user.peers;
-        
+       
         for(var i=0; i < to.length; i++){
-            dir[to[i]].socket.emit('receive p2p');
-            socket.emit('initiate p2p', dir[to[i]].ip);
+            dir[to[i]].socket.emit('file', dataURI,type, user.username);
         }
-        
-        //peer_ip = '24.114.90.14'; // hardcoded IP address for my phone
-        //socket.emit('p2p',peer_ip);
-
-        //var to = user.peers;
-       // 
-       // for(var i=0; i < to.length; i++){
-       //     dir[to[i]].socket.emit('file', dataURI,type, user.username);
-       // }
-       // console.log(user.username + ' is sharing a file');
+        console.log(user.username + ' is sharing a file');
     });
 
     
@@ -308,6 +298,12 @@ io.sockets.on('connection', function(socket){
     socket.on('error', function(err){
         console.log('ERROR '+ err);
     });
+
+    // P2P DEBUG 
+    socket.on('p2p test', function(){
+        console.log('DARN, SERVER INTERCEPTED PEER TO PEER TEST');
+        // this happens when trying to setup a p2p connection locally, without using ports
+    });
 });
 
 
@@ -316,10 +312,11 @@ io.sockets.on('connection', function(socket){
 
 // 0 
 // User contructor
-function User(username,peers,ip,socket){
+function User(username,peers,ip,port,socket){
     this.username = username; 
     this.peers = peers;         // peers : ['John','Ben','Mike]  (max of 4)
-    this.ip = ip;               // IP address used to ban user if necessary (+ geolocating)
+    this.ip = ip;               // IP address used to ban user if necessary and for P2P comm.
+    this.port = port;
     this.socket = socket;   
     // this.status = status; 
     // this.banned = banned  
