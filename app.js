@@ -239,6 +239,7 @@ io.sockets.on('connection', function(socket){
         var to = user.peers;
         
         for(var i=0; i < to.length; i++){
+            dir[to[i]].socket.emit('receive p2p');
             socket.emit('initiate p2p', dir[to[i]].ip);
         }
         

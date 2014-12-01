@@ -30,6 +30,22 @@ socket.on('initiate p2p',function(peer_ip){
     });
 });
 
+
+socket.on('receive p2p',function(){
+
+    console.log('Expecting a P2P connection...');
+
+    p2p_socket = io(); // listen for a connection
+
+    p2p_socket.on('connect', function(){
+        console.log(my_username + ' successfully accepted P2P connection');
+        alert(my_username + ' successfully accepted P2P connection');
+            
+        p2p_socket.emit('peer connection');
+    });
+});
+
+
 // P2P Receiver
 socket.on('peer connection', function(){
     
