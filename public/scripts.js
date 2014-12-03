@@ -46,14 +46,8 @@ var p2p_connection = new RTCPeerConnection({
   ]
 });
 
-    // send any ice candidates to the other peer
-    //     pc.onicecandidate = function (evt) {
-    //             signalingChannel.send(JSON.stringify({ "candidate": evt.candidate }));
-    //                 };
-
 
 // SEND PEER CONNECTION REQUEST
-// TODO may have to include that if scoket.io-client does not stringify objects automatically description = JSON.stringify(description);
 function initiateConnection() {
     p2p_connection.createOffer(function (description) {
         p2p_connection.setLocalDescription(description);
@@ -73,7 +67,6 @@ server_socket.on('p2p request', function(description,sender){
         p2p_connection.setLocalDescription(description);
         server_socket.emit('p2p reply', description,sender);
     });
-    console.log('sent p2p reply');
 });
         
 // RECEIVE REPLY
@@ -99,7 +92,6 @@ function onicecandidate(event) {
 // sent by other peer
 server_socket.on('add candidate', function(candidate,sender){
     
-    console.log('Adding ice candidate'); 
     p2p_connection.addIceCandidate(new RTCIceCandidate({
             sdpMLineIndex: candidate.sdpMLineIndex,
             candidate: candidate.candidate
@@ -109,33 +101,37 @@ server_socket.on('add candidate', function(candidate,sender){
 
 // DATA P2P CHANNEL 
 
-var dataChannel = p2p_connection.createDataChannel('label');
+var sendChannel = p2p_connection.createDataChannel('label');
 
-dataChannel.onmessage = function (event) {
+sendChannel.onmessage = function (event) {
     var data = event.data;
     console.log("I got data channel message: ", data);
 };
 
+// both receive this
+p2p_connection.ondatachannel = function (event) {
+    receiveChannel = event.channel;
+    receiveChannel.onmessage = function(event){
+    console.log(event.data);
+    };
+};
+
+
 var p2p_ready = false; 
 
-dataChannel.onopen = function (event) {
-    dataChannel.send("Hello World!");
+sendChannel.onopen = function (event) {
     console.log("Data channel ready");
+    sendChannel.send("Welcome");
     p2p_ready = true; 
 };
-dataChannel.onclose = function (event) {
+sendChannel.onclose = function (event) {
     console.log("Data channel closed.");
     p2p_ready = false; 
 };
-dataChannel.onerror = function (event) {
+sendChannel.onerror = function (event) {
     console.log("Data channel error!");
     p2p_ready = false; 
 };
-
-//p2p_connection.ondatachannel = function (e) {
-//        e.channel.onmessage = function () { … };
-//};
-
 
 
 //  A   SIGN IN
@@ -361,9 +357,9 @@ $('#upload').submit(function(){
 function shareFile(file,type){
    
     if(p2p_ready){
-        dataChannel.send("Hello World!");
-        dataChannel.close();
+        sendChannel.send("Hey World!");
     }
+    //p2p_connection.send("Hello World!");
 
     file = '';
 //    if(type === 'image'){
@@ -438,36 +434,3 @@ function appendFile(URI,type,user){
 function scrollDown(){
     $('#chat').animate({scrollTop: $('#chat').prop("scrollHeight")}, 500); 
 }
-
-////// P2P using WEBTCMultiConnection.js library
-//http://www.rtcmulticonnection.org/docs/getting-started/
-//
-//var peer_connection = new RTCMultiConnection();
-//
-//
-//peer_connection.session = {
-//    data: true
-//};
-//
-//// sets up a signaling channel
-//peer_connection.connect();
-//
-// WEB RTC: setup a signaling channel ==> socket
-//////////////////////////////////////////////////
-//peer_connection.openSignalingChannel = function (config) {
-//   
-//    var channel = config.channel || this.channel;
-//    
-//   socket.emit('new signaling channel', {
-//        channel: channel
-//    });
-//
-//   socket.on('ack signaling channel',function(peer_id){
-//   }
-//
-//    var socket = io.connect(SIGNALING_SERVER 2+ channel);
-//    socket.channel = channel;
-//}
-//var socket = io.connect(SIGNALING_SERVER + channel);
-//   socket.channel = channel;
-//////////////////////////////////////////
