@@ -16,7 +16,7 @@ Moreover, I also relied on Craig Buckler's tutorial http://www.sitepoint.com/htm
  - [x] look up online users
  - [x] ban users
  - [x] image & video sharing (up to 1.5 MB)
- - [ ] P2P image & video sharing
+ - [ ] P2P image & video sharing using WebRTC
 
 ### Technology
 
