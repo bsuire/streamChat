@@ -55,7 +55,7 @@ app.get('/admin', function(req, res){
 });
 
 //  SOCKET.IO SERVER 
-io.sockets.on('connection', function(socket){
+io.on('connection', function(socket){
     
     var user; // user Objet for this connection
     
@@ -298,15 +298,45 @@ io.sockets.on('connection', function(socket){
     socket.on('error', function(err){
         console.log('ERROR '+ err);
     });
+    
 
-    // P2P DEBUG 
-    socket.on('p2p test', function(){
-        console.log('DARN, SERVER INTERCEPTED PEER TO PEER TEST');
-        // this happens when trying to setup a p2p connection locally, without using ports
+    // P2P SHARING
+    // setup a p2p connection
+    socket.on('p2p request', function(description,sender){
+       
+        console.log('SERVER got request'); 
+
+        var to = user.peers;
+       
+        for(var i=0; i < to.length; i++){
+            
+            console.log(user.username + ' wants to share a file with '+ to[i] + '. Initiating P2P.');
+            
+            // TODO we may need a different object for each peer. In which case it's probably better to switch
+            // to a system where we store peers's names in client side
+            dir[to[i]].socket.emit('p2p request', description,sender); // append sender name for directing the reply
+        }
     });
+
+    socket.on('p2p reply', function(description,sender){
+        dir[sender].socket.emit('p2p reply',description,sender);
+    });
+
+    socket.on('add candidate', function(candidate,sender){
+        var to = user.peers;
+       
+        for(var i=0; i < to.length; i++){
+            
+            console.log(user.username + ' is sending a candidate to '+ to[i] + '.');
+            
+            // TODO we may need a different object for each peer. In which case it's probably better to switch
+            // to a system where we store peers's names in client side
+            dir[to[i]].socket.emit('add candidate', candidate,sender); // append sender name for directing the reply
+        }
+    
+    });
+
 });
-
-
 
 // FUNCTIONS
 

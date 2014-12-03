@@ -7,16 +7,142 @@
 
 var MAX_UPLOAD_SIZE = 1.5; // in MB
 
-var socket = io(); 
+var server_socket = io(); 
 
 var my_username;
+var my_socketid; 
+
+
+// Web RCT stuff
+// http://danristic.com/html5/javascript/webrtc/2013/08/13/using-the-webrtc-data-channel.html
+var IS_CHROME = !!window.webkitRTCPeerConnection,
+    RTCPeerConnection,
+    RTCIceCandidate,
+    RTCSessionDescription;
+
+if (IS_CHROME) {
+    RTCPeerConnection = webkitRTCPeerConnection;
+    RTCIceCandidate = window.RTCIceCandidate;
+    RTCSessionDescription = window.RTCSessionDescription;
+} else {
+    RTCPeerConnection = mozRTCPeerConnection;
+    RTCIceCandidate = mozRTCIceCandidate;
+    RTCSessionDescription = mozRTCSessionDescription;
+}
+
+var iceServers = {
+    iceServers: [{
+        url: 'stun:stun.l.google.com:19302'
+    }]
+};
+
+
+// TODO monitor P2P error 
+
+// Create peer connection request object
+var p2p_connection = new RTCPeerConnection({
+      iceServers: [
+        { 'url': (IS_CHROME ? 'stun:stun.l.google.com:19302' : 'stun:23.21.150.121') }
+  ]
+});
+
+    // send any ice candidates to the other peer
+    //     pc.onicecandidate = function (evt) {
+    //             signalingChannel.send(JSON.stringify({ "candidate": evt.candidate }));
+    //                 };
+
+
+// SEND PEER CONNECTION REQUEST
+// TODO may have to include that if scoket.io-client does not stringify objects automatically description = JSON.stringify(description);
+function initiateConnection() {
+    p2p_connection.createOffer(function (description) {
+        p2p_connection.setLocalDescription(description);
+        server_socket.emit('p2p request', description,my_username); 
+    });
+};
+
+// RECEIVVE PEER CONNECTION REQUEST
+server_socket.on('p2p request', function(description,sender){
+
+    console.log('received p2p request');
+    console.log(description);
+
+    p2p_connection.setRemoteDescription(new RTCSessionDescription(description));
+
+    p2p_connection.createAnswer(function (description) {
+        p2p_connection.setLocalDescription(description);
+        server_socket.emit('p2p reply', description,sender);
+    });
+    console.log('sent p2p reply');
+});
+        
+// RECEIVE REPLY
+server_socket.on('p2p reply', function(description,sender){
+    
+    console.log('received p2p reply');
+    console.log(description);
+    
+    p2p_connection.setRemoteDescription(new RTCSessionDescription(description));
+
+});
+
+// ICE candidates
+p2p_connection.onicecandidate = onicecandidate; // sent event listener
+
+// locally generated
+function onicecandidate(event) {
+    if (!p2p_connection || !event || !event.candidate) return;
+    var candidate = event.candidate;
+    server_socket.emit('add candidate',candidate,my_username);    
+}
+ 
+// sent by other peer
+server_socket.on('add candidate', function(candidate,sender){
+    
+    console.log('Adding ice candidate'); 
+    p2p_connection.addIceCandidate(new RTCIceCandidate({
+            sdpMLineIndex: candidate.sdpMLineIndex,
+            candidate: candidate.candidate
+    }));
+});
+
+
+// DATA P2P CHANNEL 
+
+var dataChannel = p2p_connection.createDataChannel('label');
+
+dataChannel.onmessage = function (event) {
+    var data = event.data;
+    console.log("I got data channel message: ", data);
+};
+
+var p2p_ready = false; 
+
+dataChannel.onopen = function (event) {
+    dataChannel.send("Hello World!");
+    console.log("Data channel ready");
+    p2p_ready = true; 
+};
+dataChannel.onclose = function (event) {
+    console.log("Data channel closed.");
+    p2p_ready = false; 
+};
+dataChannel.onerror = function (event) {
+    console.log("Data channel error!");
+    p2p_ready = false; 
+};
+
+//p2p_connection.ondatachannel = function (e) {
+//        e.channel.onmessage = function () { … };
+//};
+
 
 
 //  A   SIGN IN
 // prompts and sets username, then sends it to server
 signIn(1);
 
-socket.on('name taken', function(){
+server_socket.on('name taken', function(){
     signIn(2);
 });
 
@@ -43,13 +169,17 @@ function signIn(attempt){
             my_username = prompt("You cannot access server without entering a name first!");
         }
     }
-    socket.emit('sign in', my_username); 
+    server_socket.emit('sign in', my_username); 
 }
 
+// TODO check: client socket might already have a socket.id field that matches the one on server side
+server_socket.on('sign in ack',function(socketid){
+    my_socketid = socketid; 
+});
 
 //  B   UPDATE LOBBY (automatic upon signing in)
 //      lobby = list of online users
-socket.on('update lobby', function(users_list,total_users){
+server_socket.on('update lobby', function(users_list,total_users){
     
     $('#users').empty(); // clean lobby
 
@@ -66,7 +196,7 @@ socket.on('update lobby', function(users_list,total_users){
 //  C   SEARCH  USERS
 // search for other users online (refreshed for every keystroke in search box event) 
 $("#search").on("input", function() {
-    socket.emit('search',$('#search').val()); // emit search event and pass query/content of search box
+    server_socket.emit('search',$('#search').val()); // emit search event and pass query/content of search box
 });
 
 $('#searchfriend').submit(function(){
@@ -86,7 +216,7 @@ function drop(ev,type) {
     invite['to'] = peer_username;
     invite['from'] = my_username; 
 
-    socket.emit('invite', invite); // send invite to chat
+    server_socket.emit('invite', invite); // send invite to chat
 }
 
 // functions to enable drag and drop
@@ -101,7 +231,7 @@ function drag(ev) {
 
 //   E    RSVP TO CHAT INVITE 
 //      User gets a chat invite from another user. User sends back yes/no reply (rsvp).
-socket.on('invite', function(invite){ // e.g.: invite = {'to':'Nikolay','from':'Ben','type':'new' }  
+server_socket.on('invite', function(invite){ // e.g.: invite = {'to':'Nikolay','from':'Ben','type':'new' }  
      
     var rsvp = {}; 
     rsvp['to'] = invite['from']; // swap to and from fields
@@ -121,21 +251,25 @@ socket.on('invite', function(invite){ // e.g.: invite = {'to':'Nikolay','from':'
     {
         rsvp['rsvp'] = false; 
     }
-    socket.emit('rsvp', rsvp); // send rsvp to be processed by server
+    server_socket.emit('rsvp', rsvp); // send rsvp to be processed by server
     // ('rsvp' socket event, rsvp associative array, and rsvp.rsvp = true/false. RSVPs everywhere...) 
 });
 
 
 
 //  F   RECEIPT OF RSVP
-socket.on('rsvp', function(rsvp){
+server_socket.on('rsvp', function(rsvp){
     
     if (rsvp['rsvp'] === true){
   
         alert('Awesome! '+ rsvp['from'] +' accepted your chat invite :)');
+        
+        // other user accepted chat invite. 
+        // setup peer connection ahead of eventual file sharing
+        initiateConnection();
     } 
     else 
-    {
+{
         alert('Sorry! '+ rsvp['from'] + ' turned down your chat invite :(');
     } 
 });    
@@ -145,7 +279,7 @@ socket.on('rsvp', function(rsvp){
 $('#sendmessage').submit(function(){
     
     // send message to server
-    socket.emit('message', $('#m').val());
+    server_socket.emit('message', $('#m').val());
     
     // append user's own message directly to his/her chat window
     $('#messages').append($('<li style="color:gray; font-weight: 100;">').text('You:\t' + $('#m').val()));
@@ -160,7 +294,7 @@ $('#sendmessage').submit(function(){
 // H  RECEIVE MESSAGE
 // -- displays received message into chat window
 // -- can be from either a chat message or a notification from the server 
-socket.on('message', function(msg){
+server_socket.on('message', function(msg){
     // TODO: assign a different color to each user
 
     if(msg['from'] === 'SERVER')
@@ -178,7 +312,7 @@ socket.on('message', function(msg){
 });
 
 
-// I    SHARE FILE
+//// I    SHARE FILE
 // source: http://www.sitepoint.com/html5-file-drag-and-drop/
 var imageReader = new FileReader();
 var videoReader = new FileReader();
@@ -192,11 +326,10 @@ $('#fileselect').change(function(e){
 });
 
 
-
+// User wishes to uplaod a file. Validate.
 $('#upload').submit(function(){
-
+    
     if (file){
-   
         if (file.type.substring(0,5) === 'image' || file.type.substring(0,5) === 'video'){
         
             if (file.size > MAX_UPLOAD_SIZE * 1000 * 1000)
@@ -204,31 +337,41 @@ $('#upload').submit(function(){
                 alert('Sorry, we can only accept files up to ' + MAX_UPLOAD_SIZE + ' MB');
             }
             else if (file.type.substring(0,5) === 'image'){
-                
-                // upload image  
-                imageReader.readAsDataURL(file);
+                // upload image 
+                shareFile(file,'image'); 
             }
             else if (file.type.substring(0,5) === 'video'){
-                
                 // uplaod video  
-                videoReader.readAsDataURL(file);
+                shareFile(file,'video');
             }
         }
         else {
             alert("Sorry, you an only share images or videos");
         }
-
-        // reset select box and file object 
+        // reset select box 
         $('#fileselect').val('');
-        file = '';
     }
-    else
-    {
+    else{
         alert("You haven't selected any file to share");
     }
-    
     return false; // don't reload the page
 });
+
+// share an image or video
+function shareFile(file,type){
+   
+    if(p2p_ready){
+        dataChannel.send("Hello World!");
+        dataChannel.close();
+    }
+
+    file = '';
+//    if(type === 'image'){
+//        imageReader.readAsDataURL(file);
+//    } else {
+//        videoReader.readAsDataURL(file);
+//    }
+}
 
 
 imageReader.onload=function(e){
@@ -239,7 +382,7 @@ imageReader.onload=function(e){
     
     // share image
     // TODO try stream?
-    socket.emit('file',e.target.result,'image');
+    server_socket.emit('file',e.target.result,'image');
 };
 
 videoReader.onload=function(e){
@@ -249,10 +392,17 @@ videoReader.onload=function(e){
     scrollDown();
     
     // share video
-    socket.emit('file',e.target.result,'video');
+    server_socket.emit('file',e.target.result,'video');
 };
 
-socket.on('file', function(dataURI,type,from){
+// Receive file using WebRTC 
+// on getting local or remote media stream
+//peer_connection.onstream = function(e) {
+//document.body.appendChild(e.mediaElement);
+//};
+
+// Receive file using socket.io single chunk
+server_socket.on('file', function(dataURI,type,from){
     
     appendFile(dataURI,type,from);
     scrollDown();
@@ -260,42 +410,8 @@ socket.on('file', function(dataURI,type,from){
 });
 
 
-// TODO P2P connection setup
-
-// I've fiddled around with setting up a p2p connection
-// I tried isntantiating 1 new socket on each side
-// Here, I'm trying to add another connection to the same sockets 
-// (docs say they support multiplexing, however that not mean different origins)
-// At best I get a "connection refused error" because of same origin policy (Firefox)
-
-// P2P Initiator
-socket.on('initiate p2p',function(ip,port){
-    
-    // if defined, append port # to the ip address  
-    if (port !== '') peer_ip = ip + ':' + port;
-
-    console.log('Attempting a P2P connection to: ' + peer_ip);
-
-    socket = io.connect(peer_ip,{'force new connection':true} );// try pssing this option { 'force new connection':true }
-    
-    p2p_socket.on('connect', function(){
-        alert(my_username + ' successfully started a p2p connection with ' + peer_ip );
-        
-    });
-});
-socket.on('receive p2p',function(){
-    
-    console.log('Awaiting a P2P connection...');
-
-    socket.on('connect', function(){
-        alert("Client is connected to peer");
-    }); 
-    
-});
-///////
-
 // User Diconnected Error 
-socket.on('disconnect',function(){
+server_socket.on('disconnect',function(){
     
     notification = 'SERVER:\t You have been disconnected'.italics();
     $('#messages').append('<li>' + notification + '</li>');
@@ -322,3 +438,36 @@ function appendFile(URI,type,user){
 function scrollDown(){
     $('#chat').animate({scrollTop: $('#chat').prop("scrollHeight")}, 500); 
 }
+
+////// P2P using WEBTCMultiConnection.js library
+//http://www.rtcmulticonnection.org/docs/getting-started/
+//
+//var peer_connection = new RTCMultiConnection();
+//
+//
+//peer_connection.session = {
+//    data: true
+//};
+//
+//// sets up a signaling channel
+//peer_connection.connect();
+//
+// WEB RTC: setup a signaling channel ==> socket
+//////////////////////////////////////////////////
+//peer_connection.openSignalingChannel = function (config) {
+//   
+//    var channel = config.channel || this.channel;
+//    
+//   socket.emit('new signaling channel', {
+//        channel: channel
+//    });
+//
+//   socket.on('ack signaling channel',function(peer_id){
+//   }
+//
+//    var socket = io.connect(SIGNALING_SERVER 2+ channel);
+//    socket.channel = channel;
+//}
+//var socket = io.connect(SIGNALING_SERVER + channel);
+//   socket.channel = channel;
+//////////////////////////////////////////
