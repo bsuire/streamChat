@@ -5,7 +5,7 @@
 // TODO Show list of conversation peers  in side pannel
 // TODO implement scrolling in lobby (userlist) or make sure server always limits the number of users to what's visible
 
-var MAX_UPLOAD_SIZE = 1.5; // in MB
+var MAX_UPLOAD_SIZE = 2; // in MB /// TODO 
 
 var server_socket = io(); 
 
@@ -108,11 +108,42 @@ sendChannel.onmessage = function (event) {
     console.log("I got data channel message: ", data);
 };
 
+
+var CHUNK_SIZE = 10*1000;
+
+var receive = 0; // TODO delete that after implementing real share file protocol
+var chunks_received = 0;
+var nb_chunks = 0;
+var chunks_in = [];
+var data_url_in;
+
 // both receive this
 p2p_connection.ondatachannel = function (event) {
     receiveChannel = event.channel;
     receiveChannel.onmessage = function(event){
-    console.log(event.data);
+        console.log(event.data);
+
+        appendFile(event.data,'image','Bob');        
+//        if (event.data !== '!'){
+//
+//            if ( receive === 0 )
+//            {
+//                var nb_chunks = event.data;
+//                console.log('Waiting for : '+ nb_chunks);
+//            }
+//            else
+//            {
+//                if ( chunks_received < nb_chunks ){
+//                    chunks_in.unshift(event.data);  
+//                    chunks_received++; 
+//                }
+//                else
+//                {
+//                    data_url_in = chunks_in;
+//                    appendFile(data_url_in,'image','Bob');
+//                }
+//            }
+//        }
     };
 };
 
@@ -121,7 +152,6 @@ var p2p_ready = false;
 
 sendChannel.onopen = function (event) {
     console.log("Data channel ready");
-    sendChannel.send("Welcome");
     p2p_ready = true; 
 };
 sendChannel.onclose = function (event) {
@@ -322,63 +352,120 @@ $('#fileselect').change(function(e){
 });
 
 
-// User wishes to uplaod a file. Validate.
+// User wishes to uplaod a file. V
+// Check validity of input
 $('#upload').submit(function(){
     
-    if (file){
-        if (file.type.substring(0,5) === 'image' || file.type.substring(0,5) === 'video'){
-        
-            if (file.size > MAX_UPLOAD_SIZE * 1000 * 1000)
-            {
-                alert('Sorry, we can only accept files up to ' + MAX_UPLOAD_SIZE + ' MB');
-            }
-            else if (file.type.substring(0,5) === 'image'){
-                // upload image 
-                shareFile(file,'image'); 
-            }
-            else if (file.type.substring(0,5) === 'video'){
-                // uplaod video  
-                shareFile(file,'video');
-            }
-        }
-        else {
-            alert("Sorry, you an only share images or videos");
-        }
-        // reset select box 
-        $('#fileselect').val('');
-    }
-    else{
+    if (file) type = file.type.substring(0,5);
+
+    // no file selected
+    if ( !(file) ){
         alert("You haven't selected any file to share");
     }
-    return false; // don't reload the page
+
+    // file is neither image or video
+    else if (type !== 'image' && type !== 'video'){
+        alert("Sorry, you an only share images or videos");
+    } 
+    
+    // file exceeds maximum file size 
+    else if (file.size > MAX_UPLOAD_SIZE * 1000 * 1000){
+        alert('Sorry, we can only accept files up to ' + MAX_UPLOAD_SIZE + ' MB');
+    }
+
+    // share file
+    else {  
+        shareFile(file,type);
+    }
+    
+    $('#fileselect').val('');  // reset select box 
+    return false;              // don't reload the page
 });
 
 // share an image or video
 function shareFile(file,type){
-   
-    if(p2p_ready){
-        sendChannel.send("Hey World!");
+    
+    if(type === 'image'){
+        imageReader.readAsDataURL(file);
+    } else {
+        videoReader.readAsDataURL(file);
     }
-    //p2p_connection.send("Hello World!");
-
     file = '';
-//    if(type === 'image'){
-//        imageReader.readAsDataURL(file);
-//    } else {
-//        videoReader.readAsDataURL(file);
-//    }
 }
 
-
+// TODO Find a way to simplify so there's only one function for both 
 imageReader.onload=function(e){
     
+    var data_url = e.target.result;
+
     // append image to own interface
-    appendFile(e.target.result,'image','self');
+    appendFile(data_url,'image','self');
     scrollDown();
     
     // share image
     // TODO try stream?
-    server_socket.emit('file',e.target.result,'image');
+
+    // chunkify
+    // assuming UTF-8 --> 1 byte per character
+    // according to the source below, the max recommended chunk size is 16KB. We'll use 10KB just to be safe 
+    // http://www.html5rocks.com/en/tutorials/webrtc/datachannels/?redirect_from_locale=fr0
+
+    // TODO use constant var for choosing chunk size
+
+    console.log('Data URL length: ' + data_url.length);
+
+    var chunks = [];
+
+    var chunk = '';
+
+    var i = 0;
+
+    while (i + CHUNK_SIZE < data_url.length) {
+       
+        // this implementation does not affect the data_url string
+        // end up using 2x the memory, but supposedly faster because not manipulating the data_url string
+        // put if slicing array only updates pointers, then splice and splice would probably be better
+        
+        // TODO push ulements onto chunks and shift them away to peers as they come
+        // ==> some kind of streaming implementation, that would save some memory and deliver them more quickly
+        chunk = data_url.slice(i,i+CHUNK_SIZE); 
+        chunks.push(chunk);
+
+        i += CHUNK_SIZE;
+    }
+    //last chunk 
+    chunk = data_url.slice(i,data_url.length);   
+    
+    console.log('# chunks to be sent: ' + chunks.length); 
+
+    if (p2p_ready){
+        sendChannel.send(data_url);
+        
+        // TODO add custom events to data channel
+//        sendChannel.send(chunks.length);
+   
+//        for(var k=0; k<100;k++){
+//            sendChannel.send('!'); // flush channel
+//        }
+//
+//        for (var j = 0; j < chunks.length; j++){
+//            
+//            var data = chunks.pop();
+//            sendChannel.send(data);
+//        }
+//        for(var k=0; k<100;k++){
+//            sendChannel.send('!'); // flush channel
+//        }
+//
+//        for(var k=0; k<20;k++){
+//            sendChannel.send('?'); // make sure all the bits got in channel
+//        }
+
+    } 
+    else
+    {
+        server_socket.emit('file',e.target.result,'image');
+    }
 };
 
 videoReader.onload=function(e){
